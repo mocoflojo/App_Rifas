@@ -62,7 +62,8 @@ button {
   cursor: pointer;
 }
 
-/* Layout con barra inferior (mobile-first, ~380px) */
+/* Layout con barra inferior (mobile-first, ~380px). En pantallas >=768px
+   el mismo nav pasa a ser un sidebar lateral (ver breakpoint desktop). */
 .app-shell {
   display: flex;
   flex-direction: column;
@@ -77,6 +78,7 @@ button {
   flex: 1;
   padding: 16px;
   padding-bottom: calc(var(--nav-height) + 16px);
+  width: 100%;
 }
 
 .bottom-nav {
@@ -113,6 +115,59 @@ button {
 
 .bottom-nav a .icon {
   font-size: 18px;
+}
+
+/* Desktop (>=768px): el shell pasa a fila, el nav se convierte en sidebar
+   fijo a la izquierda y el contenido usa el ancho disponible. */
+@media (min-width: 768px) {
+  .app-shell {
+    flex-direction: row;
+    max-width: 1200px;
+    min-height: 100vh;
+  }
+
+  .app-content {
+    padding: 32px 40px;
+    padding-bottom: 32px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .bottom-nav {
+    order: -1;
+    position: sticky;
+    top: 0;
+    left: auto;
+    transform: none;
+    flex: 0 0 220px;
+    width: 220px;
+    max-width: 220px;
+    height: 100vh;
+    flex-direction: column;
+    overflow-x: visible;
+    overflow-y: auto;
+    border-top: none;
+    border-right: 1px solid var(--border);
+    padding-top: 12px;
+    align-items: stretch;
+  }
+
+  .bottom-nav a {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 10px;
+    font-size: 13px;
+    padding: 12px 20px;
+    border-radius: 0;
+  }
+
+  .bottom-nav a.active {
+    background: var(--abonado);
+  }
+
+  .bottom-nav a .icon {
+    font-size: 16px;
+  }
 }
 
 /* Componentes compartidos */
