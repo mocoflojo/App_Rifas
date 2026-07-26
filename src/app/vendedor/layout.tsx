@@ -2,24 +2,62 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { BottomNav, type NavItem } from "@/components/BottomNav";
+import { AppShell, type NavItem } from "@/components/AppShell";
 import { limpiarSesion, getDeviceToken } from "@/lib/session";
 import { supabase } from "@/lib/supabase";
 
 const items: NavItem[] = [
-  { href: "/vendedor/resumen", label: "Resumen", icon: "📊" },
-  { href: "/vendedor/numeros", label: "Números", icon: "🔢" },
-  { href: "/vendedor/clientes", label: "Clientes", icon: "👥" },
-  { href: "/vendedor/agenda", label: "Agenda", icon: "📅" },
-  { href: "/vendedor/logros", label: "Logros", icon: "🏆" },
+  { href: "/vendedor/resumen", label: "Resumen", icon: "dashboard" },
+  { href: "/vendedor/numeros", label: "Números", icon: "grid_view" },
+  { href: "/vendedor/clientes", label: "Clientes", icon: "contacts" },
+  { href: "/vendedor/agenda", label: "Agenda", icon: "calendar_month" },
+  { href: "/vendedor/logros", label: "Logros", icon: "military_tech" },
 ];
 
 type Estado = "verificando" | "pendiente" | "suspendido" | "no_registrado" | "activo";
 
+/** Pantalla de bloqueo para vendedores no aprobados. */
+function Aviso({
+  icono,
+  titulo,
+  mensaje,
+  tono,
+  onSalir,
+}: {
+  icono: string;
+  titulo: string;
+  mensaje: string;
+  tono: "espera" | "error";
+  onSalir: () => void;
+}) {
+  const colores =
+    tono === "espera"
+      ? "bg-estado-apartado-bg text-estado-apartado-fg"
+      : "bg-error-container text-on-error-container";
+
+  return (
+    <main className="flex min-h-dvh flex-col items-center justify-center gap-5 px-6 text-center">
+      <div className={`flex size-20 items-center justify-center rounded-full ${colores}`}>
+        <span className="material-symbols-outlined filled text-[36px]">{icono}</span>
+      </div>
+      <div className="flex flex-col gap-2">
+        <h1 className="text-display-mobile text-primary">{titulo}</h1>
+        <p className="max-w-sm text-body-lg text-on-surface-variant">{mensaje}</p>
+      </div>
+      <button
+        onClick={onSalir}
+        className="h-12 rounded-lg border-2 border-secondary px-8 text-body-lg font-semibold text-secondary transition-colors active:bg-secondary/10"
+      >
+        Salir
+      </button>
+    </main>
+  );
+}
+
 export default function VendedorLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [estado, setEstado] = useState<Estado>("verificando");
-  const [nombre, setNombre] = useState<string>("");
+  const [nombre, setNombre] = useState("");
 
   useEffect(() => {
     let cancelado = false;
@@ -56,49 +94,31 @@ export default function VendedorLayout({ children }: { children: React.ReactNode
 
   if (estado === "pendiente") {
     return (
-      <main className="app-shell">
-        <div className="app-content" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <h1 className="page-title">Solicitud enviada</h1>
-          <div className="card">
-            Hola {nombre}, tu registro está pendiente de aprobación por el admin.
-            Vuelve a abrir la app más tarde.
-          </div>
-          <button className="btn-secondary" onClick={salir}>
-            Salir
-          </button>
-        </div>
-      </main>
+      <Aviso
+        icono="hourglass_top"
+        titulo="Solicitud enviada"
+        mensaje={`Hola ${nombre}, tu registro está pendiente de aprobación por el admin. Vuelve a abrir la app más tarde.`}
+        tono="espera"
+        onSalir={salir}
+      />
     );
   }
 
   if (estado === "suspendido") {
     return (
-      <main className="app-shell">
-        <div className="app-content" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <h1 className="page-title">Cuenta suspendida</h1>
-          <div className="card">
-            Tu acceso fue suspendido por el admin. Contáctalo si crees que es un error.
-          </div>
-          <button className="btn-secondary" onClick={salir}>
-            Salir
-          </button>
-        </div>
-      </main>
+      <Aviso
+        icono="block"
+        titulo="Cuenta suspendida"
+        mensaje="Tu acceso fue suspendido por el admin. Contáctalo si crees que es un error."
+        tono="error"
+        onSalir={salir}
+      />
     );
   }
 
   return (
-    <div className="app-shell">
-      <div className="app-content">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-          <span style={{ fontSize: 11, color: "#888" }}>{nombre}</span>
-          <button onClick={salir} style={{ background: "none", border: "none", color: "#888", fontSize: 11 }}>
-            Salir
-          </button>
-        </div>
-        {children}
-      </div>
-      <BottomNav items={items} />
-    </div>
+    <AppShell titulo="Mis ventas" usuario={nombre} items={items} onSalir={salir}>
+      {children}
+    </AppShell>
   );
 }

@@ -2,19 +2,24 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { BottomNav, type NavItem } from "@/components/BottomNav";
+import { AppShell, type NavItem } from "@/components/AppShell";
 import { limpiarSesion, getAdminToken } from "@/lib/session";
 import { supabase } from "@/lib/supabase";
 
-const items: NavItem[] = [
-  { href: "/admin/resumen", label: "Resumen", icon: "📊" },
-  { href: "/admin/talonario", label: "Talonario", icon: "🎟️" },
-  { href: "/admin/confirmar", label: "Confirmar", icon: "✅" },
-  { href: "/admin/vendedores", label: "Vendedores", icon: "👥" },
-  { href: "/admin/vencimientos", label: "Vencim.", icon: "⏰" },
-  { href: "/admin/sorteo", label: "Sorteo", icon: "🏍️" },
-  { href: "/admin/historial", label: "Historial", icon: "📁" },
-  { href: "/admin/config", label: "Config", icon: "⚙️" },
+/* Diarias: van en la barra inferior. */
+const principales: NavItem[] = [
+  { href: "/admin/resumen", label: "Resumen", icon: "dashboard" },
+  { href: "/admin/talonario", label: "Talonario", icon: "grid_view" },
+  { href: "/admin/confirmar", label: "Confirmar", icon: "fact_check" },
+  { href: "/admin/vendedores", label: "Vendedores", icon: "group" },
+];
+
+/* Periódicas: van en el menú "Más". */
+const secundarias: NavItem[] = [
+  { href: "/admin/vencimientos", label: "Vencimientos", icon: "schedule" },
+  { href: "/admin/sorteo", label: "Sorteo", icon: "emoji_events" },
+  { href: "/admin/historial", label: "Historial", icon: "history" },
+  { href: "/admin/config", label: "Configuración", icon: "settings" },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -52,17 +57,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   return (
-    <div className="app-shell">
-      <div className="app-content">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-          <span style={{ fontSize: 11, color: "#888" }}>Admin</span>
-          <button onClick={salir} style={{ background: "none", border: "none", color: "#888", fontSize: 11 }}>
-            Salir
-          </button>
-        </div>
-        {children}
-      </div>
-      <BottomNav items={items} />
-    </div>
+    <AppShell
+      titulo="Administración"
+      usuario="Admin"
+      items={principales}
+      itemsSecundarios={secundarias}
+      onSalir={salir}
+    >
+      {children}
+    </AppShell>
   );
 }

@@ -5,12 +5,30 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { getRol, setRolAdmin, setRolVendedor, getDeviceToken } from "@/lib/session";
 
-type Modo = "elegir" | "vendedor" | "admin";
+type Pestana = "vendedor" | "admin";
+
+/** Input con icono a la izquierda, según el sistema de diseño. */
+function Campo({
+  icono,
+  ...props
+}: { icono: string } & React.InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <div className="group relative">
+      <span className="material-symbols-outlined pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[20px] text-outline transition-colors group-focus-within:text-secondary">
+        {icono}
+      </span>
+      <input
+        {...props}
+        className="h-14 w-full rounded-lg border-none bg-surface-container-lowest pl-12 pr-4 text-body-lg text-on-surface shadow-sm outline-none transition-all placeholder:text-outline focus:ring-2 focus:ring-secondary"
+      />
+    </div>
+  );
+}
 
 export default function Entrada() {
   const router = useRouter();
   const [revisando, setRevisando] = useState(true);
-  const [modo, setModo] = useState<Modo>("elegir");
+  const [pestana, setPestana] = useState<Pestana>("vendedor");
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,6 +43,11 @@ export default function Entrada() {
     else if (rol === "vendedor") router.replace("/vendedor/resumen");
     else setRevisando(false);
   }, [router]);
+
+  function cambiarPestana(p: Pestana) {
+    setPestana(p);
+    setError(null);
+  }
 
   async function registrarVendedor(e: React.FormEvent) {
     e.preventDefault();
@@ -66,66 +89,119 @@ export default function Entrada() {
   if (revisando) return null;
 
   return (
-    <main className="app-shell">
-      <div
-        className="app-content"
-        style={{ justifyContent: "center", display: "flex", flexDirection: "column", gap: 16 }}
-      >
-        <h1 className="page-title">App de Gestión de Rifas</h1>
+    <main className="flex min-h-dvh flex-col items-center px-6 py-10">
+      <div className="flex w-full max-w-md flex-col items-center gap-6">
+        {/* Marca */}
+        <div className="flex size-24 items-center justify-center rounded-full bg-surface-container-lowest shadow-[0_10px_25px_rgba(26,82,118,0.08)]">
+          <div className="flex size-16 items-center justify-center rounded-xl bg-primary text-on-primary">
+            <span className="material-symbols-outlined text-[32px]">
+              confirmation_number
+            </span>
+          </div>
+        </div>
 
-        {modo === "elegir" && (
-          <>
-            <button className="btn-primary" onClick={() => setModo("vendedor")}>
-              Soy vendedor
-            </button>
-            <button className="btn-secondary" onClick={() => setModo("admin")}>
-              Soy admin
-            </button>
-          </>
-        )}
+        <div className="flex flex-col items-center gap-2 text-center">
+          <h1 className="text-display-mobile text-primary">¡Bienvenido!</h1>
+          <p className="text-body-lg text-on-surface-variant">
+            Gestiona la rifa mensual y tus ventas desde un solo lugar.
+          </p>
+        </div>
 
-        {modo === "vendedor" && (
-          <form onSubmit={registrarVendedor} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <label>
-              Código de invitación
-              <input value={codigo} onChange={(e) => setCodigo(e.target.value)} required style={inputStyle} />
-            </label>
-            <label>
-              Nombre
-              <input value={nombre} onChange={(e) => setNombre(e.target.value)} required style={inputStyle} />
-            </label>
-            <label>
-              WhatsApp
-              <input value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} required style={inputStyle} placeholder="+58..." />
-            </label>
-            {error && <p style={{ color: "#c0392b", fontSize: 12.5 }}>{error}</p>}
-            <button className="btn-primary" type="submit" disabled={cargando}>
-              {cargando ? "Enviando..." : "Registrarme"}
+        {/* Selector de rol */}
+        <div className="flex w-full rounded-lg bg-surface-container p-1">
+          {(["vendedor", "admin"] as const).map((p) => (
+            <button
+              key={p}
+              onClick={() => cambiarPestana(p)}
+              className={`flex-1 rounded-[0.75rem] py-3 text-label-caps uppercase transition-all ${
+                pestana === p
+                  ? "bg-surface-container-lowest text-primary shadow-sm"
+                  : "text-on-surface-variant"
+              }`}
+            >
+              {p === "vendedor" ? "Soy vendedor" : "Soy admin"}
             </button>
-            <button type="button" className="btn-secondary" onClick={() => { setModo("elegir"); setError(null); }}>
-              Volver
+          ))}
+        </div>
+
+        {pestana === "vendedor" ? (
+          <form onSubmit={registrarVendedor} className="flex w-full flex-col gap-3">
+            <Campo
+              icono="person"
+              placeholder="Nombre completo"
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+              required
+            />
+            <Campo
+              icono="chat"
+              placeholder="WhatsApp (+58...)"
+              value={whatsapp}
+              onChange={(e) => setWhatsapp(e.target.value)}
+              required
+            />
+            <Campo
+              icono="key"
+              placeholder="Código de invitación"
+              value={codigo}
+              onChange={(e) => setCodigo(e.target.value)}
+              required
+            />
+
+            {error && (
+              <div className="flex items-center gap-2 rounded-lg bg-error-container px-4 py-3 text-body-sm text-on-error-container">
+                <span className="material-symbols-outlined text-[18px]">error</span>
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={cargando}
+              className="flex h-14 items-center justify-center gap-2 rounded-lg bg-linear-to-r from-primary to-secondary text-body-lg font-semibold text-on-primary shadow-lg transition-transform active:scale-[0.98] disabled:opacity-60"
+            >
+              {cargando ? "Enviando..." : "Solicitar acceso"}
+              {!cargando && (
+                <span className="material-symbols-outlined text-[20px]">
+                  arrow_forward
+                </span>
+              )}
             </button>
+
+            <div className="flex items-start gap-3 rounded-lg bg-estado-abonado-bg px-4 py-3 text-body-sm text-primary">
+              <span className="material-symbols-outlined text-[20px]">info</span>
+              Tu solicitud será revisada por el administrador antes de darte acceso.
+            </div>
           </form>
-        )}
+        ) : (
+          <form onSubmit={entrarAdmin} className="flex w-full flex-col gap-3">
+            <Campo
+              icono="lock"
+              type="password"
+              placeholder="Clave maestra"
+              value={clave}
+              onChange={(e) => setClave(e.target.value)}
+              required
+            />
 
-        {modo === "admin" && (
-          <form onSubmit={entrarAdmin} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <label>
-              Clave maestra
-              <input
-                type="password"
-                value={clave}
-                onChange={(e) => setClave(e.target.value)}
-                required
-                style={inputStyle}
-              />
-            </label>
-            {error && <p style={{ color: "#c0392b", fontSize: 12.5 }}>{error}</p>}
-            <button className="btn-primary" type="submit" disabled={cargando}>
+            {error && (
+              <div className="flex items-center gap-2 rounded-lg bg-error-container px-4 py-3 text-body-sm text-on-error-container">
+                <span className="material-symbols-outlined text-[18px]">error</span>
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={cargando}
+              className="flex h-14 items-center justify-center gap-2 rounded-lg bg-linear-to-r from-primary to-secondary text-body-lg font-semibold text-on-primary shadow-lg transition-transform active:scale-[0.98] disabled:opacity-60"
+            >
               {cargando ? "Entrando..." : "Entrar"}
-            </button>
-            <button type="button" className="btn-secondary" onClick={() => { setModo("elegir"); setError(null); }}>
-              Volver
+              {!cargando && (
+                <span className="material-symbols-outlined text-[20px]">
+                  arrow_forward
+                </span>
+              )}
             </button>
           </form>
         )}
@@ -133,13 +209,3 @@ export default function Entrada() {
     </main>
   );
 }
-
-const inputStyle: React.CSSProperties = {
-  display: "block",
-  width: "100%",
-  marginTop: 4,
-  padding: 10,
-  border: "1px solid var(--border)",
-  borderRadius: 6,
-  fontSize: 14,
-};
