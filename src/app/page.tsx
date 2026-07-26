@@ -1,29 +1,42 @@
-import { supabase } from "@/lib/supabase";
+"use client";
 
-export default async function Home() {
-  const { count: totalNumeros, error: errNumeros } = await supabase
-    .from("numeros")
-    .select("*", { count: "exact", head: true });
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { getRol, setRol, type Rol } from "@/lib/session";
 
-  const { data: config, error: errConfig } = await supabase
-    .from("config")
-    .select("mes_actual, codigo_invitacion")
-    .single();
+export default function Entrada() {
+  const router = useRouter();
+  const [revisando, setRevisando] = useState(true);
+
+  useEffect(() => {
+    const rol = getRol();
+    if (rol === "admin") router.replace("/admin/resumen");
+    else if (rol === "vendedor") router.replace("/vendedor/resumen");
+    else setRevisando(false);
+  }, [router]);
+
+  function entrarComo(rol: Rol) {
+    setRol(rol);
+    router.replace(rol === "admin" ? "/admin/resumen" : "/vendedor/resumen");
+  }
+
+  if (revisando) return null;
 
   return (
-    <main style={{ padding: 40, fontFamily: "sans-serif" }}>
-      <h1>Conexión a Supabase — prueba Fase 0</h1>
-      {errNumeros || errConfig ? (
-        <p style={{ color: "red" }}>
-          Error conectando: {errNumeros?.message ?? errConfig?.message}
+    <main className="app-shell">
+      <div className="app-content" style={{ justifyContent: "center", display: "flex", flexDirection: "column", gap: 16 }}>
+        <h1 className="page-title">App de Gestión de Rifas</h1>
+        <p style={{ marginBottom: 8, color: "#777", fontSize: 12.5 }}>
+          Selector temporal de Fase 1 — el registro real (código de invitación,
+          aprobación del admin) se implementa en la Fase 2.
         </p>
-      ) : (
-        <ul>
-          <li>Números en talonario: {totalNumeros}</li>
-          <li>Mes actual (config): {config?.mes_actual}</li>
-          <li>Código de invitación: {config?.codigo_invitacion}</li>
-        </ul>
-      )}
+        <button className="btn-primary" onClick={() => entrarComo("vendedor")}>
+          Entrar como vendedor (demo)
+        </button>
+        <button className="btn-secondary" onClick={() => entrarComo("admin")}>
+          Entrar como admin (demo)
+        </button>
+      </div>
     </main>
   );
 }
