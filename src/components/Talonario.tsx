@@ -97,11 +97,13 @@ type Detalle = Record<string, unknown> | null;
 
 type Props = {
   modo: "admin" | "vendedor";
-  /** Se muestra cuando el vendedor toca un número libre (Fase 4). */
-  onApartar?: (numero: number) => void;
+  /** Habilita el botón de acción sobre números libres o propios. */
+  onAbrir?: (numero: number) => void;
+  /** Cambia para forzar una recarga desde fuera (tras registrar una venta). */
+  recarga?: number;
 };
 
-export function Talonario({ modo, onApartar }: Props) {
+export function Talonario({ modo, onAbrir, recarga = 0 }: Props) {
   const [numeros, setNumeros] = useState<NumeroFila[] | null>(null);
   const [filtro, setFiltro] = useState<string>("todos");
   const [filtroVendedor, setFiltroVendedor] = useState<string>("todos");
@@ -133,7 +135,7 @@ export function Talonario({ modo, onApartar }: Props) {
     return () => {
       cancelado = true;
     };
-  }, []);
+  }, [recarga]);
 
   /* --- Tiempo real: una sola suscripción a la tabla ---------------- */
   useEffect(() => {
@@ -283,6 +285,8 @@ export function Talonario({ modo, onApartar }: Props) {
 
   const seleccion = numeros.find((n) => n.numero === seleccionado);
   const aparienciaSel = seleccion ? apariencia(seleccion) : null;
+  const esPropio =
+    modo === "vendedor" && !!seleccion?.vendedor_id && seleccion.vendedor_id === miId;
 
   return (
     <div className="flex flex-col gap-4">
@@ -419,12 +423,12 @@ export function Talonario({ modo, onApartar }: Props) {
               </span>
             </div>
             <div className="flex gap-2">
-              {seleccion.estado === "libre" && onApartar && (
+              {onAbrir && (seleccion.estado === "libre" || esPropio) && (
                 <button
-                  onClick={() => onApartar(seleccion.numero)}
+                  onClick={() => onAbrir(seleccion.numero)}
                   className="flex h-12 items-center rounded-lg bg-secondary px-6 text-body-lg font-semibold text-on-secondary shadow-lg transition-transform active:scale-95"
                 >
-                  Apartar
+                  {seleccion.estado === "libre" ? "Apartar" : "Gestionar"}
                 </button>
               )}
               <button

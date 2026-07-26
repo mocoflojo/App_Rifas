@@ -1,11 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { getRol, setRolAdmin, setRolVendedor, getDeviceToken } from "@/lib/session";
 
 type Pestana = "vendedor" | "admin";
+
+/* El rol vive en localStorage, que no existe al renderizar en el servidor.
+   useSyncExternalStore devuelve "cargando" en el servidor y en la hidratación,
+   y el valor real en el render siguiente: así no hay desajuste de hidratación
+   ni un setState dentro de un efecto. */
+const sinSuscripcion = () => () => {};
+const rolEnServidor = () => "cargando" as const;
 
 /** Input con icono a la izquierda, según el sistema de diseño. */
 function Campo({
@@ -27,7 +34,7 @@ function Campo({
 
 export default function Entrada() {
   const router = useRouter();
-  const [revisando, setRevisando] = useState(true);
+  const rol = useSyncExternalStore(sinSuscripcion, getRol, rolEnServidor);
   const [pestana, setPestana] = useState<Pestana>("vendedor");
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,11 +45,9 @@ export default function Entrada() {
   const [clave, setClave] = useState("");
 
   useEffect(() => {
-    const rol = getRol();
     if (rol === "admin") router.replace("/admin/resumen");
     else if (rol === "vendedor") router.replace("/vendedor/resumen");
-    else setRevisando(false);
-  }, [router]);
+  }, [rol, router]);
 
   function cambiarPestana(p: Pestana) {
     setPestana(p);
@@ -86,7 +91,9 @@ export default function Entrada() {
     router.replace("/admin/resumen");
   }
 
-  if (revisando) return null;
+  /* Mientras no se sepa el rol, o si hay sesión y toca redirigir, no se pinta
+     la pantalla de acceso para no verla parpadear. */
+  if (rol !== null) return null;
 
   return (
     <main className="flex min-h-dvh flex-col items-center px-6 py-10">

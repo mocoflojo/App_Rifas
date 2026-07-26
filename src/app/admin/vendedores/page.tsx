@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { getAdminToken } from "@/lib/session";
 
@@ -51,16 +51,22 @@ export default function VendedoresPage() {
   const [actualizando, setActualizando] = useState<string | null>(null);
   const [filtro, setFiltro] = useState<Filtro>("todos");
 
-  const cargar = useCallback(async () => {
-    const { data, error } = await supabase.rpc("admin_listar_vendedores", {
-      p_admin_token: getAdminToken(),
-    });
-    if (!error && data) setVendedores(data as Vendedor[]);
-  }, []);
+  /* Se incrementa para volver a pedir la lista tras un cambio de estado. */
+  const [recarga, setRecarga] = useState(0);
 
   useEffect(() => {
-    cargar();
-  }, [cargar]);
+    let cancelado = false;
+    (async () => {
+      const { data, error } = await supabase.rpc("admin_listar_vendedores", {
+        p_admin_token: getAdminToken(),
+      });
+      // La guarda evita que una respuesta lenta pise a una posterior.
+      if (!cancelado && !error && data) setVendedores(data as Vendedor[]);
+    })();
+    return () => {
+      cancelado = true;
+    };
+  }, [recarga]);
 
   async function cambiarEstado(id: string, estado: Estado) {
     setActualizando(id);
@@ -69,8 +75,8 @@ export default function VendedoresPage() {
       p_vendedor_id: id,
       p_estado: estado,
     });
-    await cargar();
     setActualizando(null);
+    setRecarga((n) => n + 1);
   }
 
   if (vendedores === null) {
