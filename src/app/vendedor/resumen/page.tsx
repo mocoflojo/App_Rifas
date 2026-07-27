@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { getVendedorToken } from "@/lib/session";
 import { ListaPagos, type Pago } from "@/components/ListaPagos";
+import type { AlertasVendedor } from "@/lib/alertas";
 
 type Resumen = {
   nombre: string;
@@ -50,18 +52,21 @@ function Contador({
 export default function ResumenVendedorPage() {
   const [datos, setDatos] = useState<Resumen | null>(null);
   const [pagos, setPagos] = useState<Pago[]>([]);
+  const [alertas, setAlertas] = useState<AlertasVendedor | null>(null);
 
   useEffect(() => {
     let cancelado = false;
     (async () => {
       const token = getVendedorToken();
-      const [r, p] = await Promise.all([
+      const [r, p, a] = await Promise.all([
         supabase.rpc("vendedor_resumen_comisiones", { p_token: token }),
         supabase.rpc("vendedor_mis_pagos", { p_token: token }),
+        supabase.rpc("vendedor_alertas", { p_token: token }),
       ]);
       if (cancelado) return;
       if (!r.error && r.data) setDatos(r.data as Resumen);
       if (!p.error && p.data) setPagos(p.data as Pago[]);
+      if (!a.error && a.data) setAlertas(a.data as AlertasVendedor);
     })();
     return () => {
       cancelado = true;
@@ -90,6 +95,33 @@ export default function ResumenVendedorPage() {
           ¡Hola, {primerNombre}! 👋
         </h1>
       </div>
+
+      {/* Alertas del día (§9.1): un aviso solo si hay algo que atender hoy. */}
+      {alertas && alertas.agenda > 0 && (
+        <Link
+          href="/vendedor/agenda"
+          className="flex items-center gap-3 rounded-xl border-l-4 border-status-pending bg-surface-container-lowest p-4 shadow-sm transition-transform active:scale-[0.99]"
+        >
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-estado-apartado-bg text-estado-apartado-fg">
+            <span className="material-symbols-outlined text-[20px]">
+              notifications
+            </span>
+          </span>
+          <div className="flex min-w-0 flex-1 flex-col">
+            <span className="text-body-lg font-semibold text-on-surface">
+              {alertas.agenda === 1
+                ? "Tienes 1 pendiente hoy"
+                : `Tienes ${alertas.agenda} pendientes hoy`}
+            </span>
+            <span className="text-body-sm text-on-surface-variant">
+              Cobros pautados, apartados por vencer o abonos por cerrar.
+            </span>
+          </div>
+          <span className="material-symbols-outlined text-[20px] text-on-surface-variant">
+            chevron_right
+          </span>
+        </Link>
+      )}
 
       {/* Meta en curso */}
       <section className="relative flex flex-col gap-3 overflow-hidden rounded-xl bg-primary p-6 text-on-primary shadow-xl">

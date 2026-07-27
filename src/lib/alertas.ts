@@ -18,6 +18,7 @@ export type AlertasVendedor = {
   /** Números distintos que reclaman atención hoy — no la suma de los tres
    *  contadores de arriba, que se solapan entre sí. */
   agenda: number;
+  logros_nuevos: number;
   dia_limite: number;
   dias_para_corte: number;
   abono_minimo: number;

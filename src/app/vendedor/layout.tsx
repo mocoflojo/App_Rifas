@@ -157,6 +157,8 @@ export default function VendedorLayout({ children }: { children: React.ReactNode
             return { ...i, badge: alertas.agenda };
           if (i.href === "/vendedor/clientes")
             return { ...i, badge: alertas.rechazos };
+          if (i.href === "/vendedor/logros")
+            return { ...i, badge: alertas.logros_nuevos };
           return i;
         })}
         onCuenta={() => setMostrarCuenta(true)}
