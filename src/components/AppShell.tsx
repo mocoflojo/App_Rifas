@@ -17,6 +17,8 @@ type Props = {
   items: NavItem[];
   /** Secciones secundarias, accesibles desde el botón "Más". */
   itemsSecundarios?: NavItem[];
+  /** Si se pasa, muestra un botón de cuenta junto a "Salir" (p.ej. cambiar clave). */
+  onCuenta?: () => void;
   onSalir: () => void;
   children: React.ReactNode;
 };
@@ -26,6 +28,7 @@ export function AppShell({
   usuario,
   items,
   itemsSecundarios = [],
+  onCuenta,
   onSalir,
   children,
 }: Props) {
@@ -84,6 +87,17 @@ export function AppShell({
               <span className="hidden text-body-sm text-on-surface-variant sm:inline">
                 {usuario}
               </span>
+              {onCuenta && (
+                <button
+                  onClick={onCuenta}
+                  aria-label="Cambiar clave"
+                  className="flex size-9 items-center justify-center rounded-full text-on-surface-variant transition-colors hover:bg-surface-container"
+                >
+                  <span className="material-symbols-outlined text-[20px]">
+                    manage_accounts
+                  </span>
+                </button>
+              )}
               <button
                 onClick={onSalir}
                 aria-label="Salir"

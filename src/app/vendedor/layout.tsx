@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppShell, type NavItem } from "@/components/AppShell";
+import { CambiarClave } from "@/components/CambiarClave";
 import { limpiarSesion, getVendedorToken } from "@/lib/session";
 import { supabase } from "@/lib/supabase";
 
@@ -58,6 +59,7 @@ export default function VendedorLayout({ children }: { children: React.ReactNode
   const router = useRouter();
   const [estado, setEstado] = useState<Estado>("verificando");
   const [nombre, setNombre] = useState("");
+  const [mostrarCuenta, setMostrarCuenta] = useState(false);
 
   useEffect(() => {
     let cancelado = false;
@@ -125,8 +127,17 @@ export default function VendedorLayout({ children }: { children: React.ReactNode
   }
 
   return (
-    <AppShell titulo="Mis ventas" usuario={nombre} items={items} onSalir={salir}>
-      {children}
-    </AppShell>
+    <>
+      <AppShell
+        titulo="Mis ventas"
+        usuario={nombre}
+        items={items}
+        onCuenta={() => setMostrarCuenta(true)}
+        onSalir={salir}
+      >
+        {children}
+      </AppShell>
+      {mostrarCuenta && <CambiarClave onCerrar={() => setMostrarCuenta(false)} />}
+    </>
   );
 }

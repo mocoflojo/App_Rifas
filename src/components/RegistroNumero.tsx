@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { getVendedorToken } from "@/lib/session";
 import { mensajeError } from "@/lib/errores";
+import { enlaceWhatsapp } from "@/lib/telefono";
 
 type Accion = "apartar" | "abonar" | "pagado";
 
@@ -414,7 +415,7 @@ export function RegistroNumero({ numero, onCerrar, onListo }: Props) {
           </span>
           {detalle.cliente_whatsapp && (
             <a
-              href={`https://wa.me/${detalle.cliente_whatsapp.replace(/[^0-9]/g, "")}`}
+              href={enlaceWhatsapp(detalle.cliente_whatsapp)}
               target="_blank"
               rel="noopener noreferrer"
               className="flex w-fit items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-body-sm text-on-primary-container"
@@ -553,7 +554,7 @@ export function RegistroNumero({ numero, onCerrar, onListo }: Props) {
 /* ------------------------------------------------------------------ */
 
 /** Hoja que sube desde abajo en móvil y diálogo centrado en escritorio. */
-function Contenedor({
+export function Contenedor({
   titulo,
   onCerrar,
   children,

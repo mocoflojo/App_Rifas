@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { getAdminToken } from "@/lib/session";
+import { enlaceWhatsapp } from "@/lib/telefono";
+import { mensajeError } from "@/lib/errores";
 
 type Estado = "pendiente" | "activo" | "suspendido";
 
@@ -114,6 +116,23 @@ export default function VendedoresPage() {
       whatsapp: data.whatsapp ?? "",
       clave,
     });
+  }
+
+  async function eliminarVendedor(v: Vendedor) {
+    if (!confirm(`¿Borrar a ${v.nombre}? Solo funciona si no tiene números ni pagos registrados.`)) {
+      return;
+    }
+    setActualizando(v.id);
+    const { error } = await supabase.rpc("admin_eliminar_vendedor", {
+      p_admin_token: getAdminToken(),
+      p_vendedor_id: v.id,
+    });
+    setActualizando(null);
+    if (error) {
+      alert(mensajeError(error));
+      return;
+    }
+    setRecarga((n) => n + 1);
   }
 
   if (vendedores === null) {
@@ -309,6 +328,19 @@ export default function VendedoresPage() {
                       lock_reset
                     </span>
                   </button>
+                  {v.tickets_activos === 0 && (
+                    <button
+                      disabled={actualizando === v.id}
+                      onClick={() => eliminarVendedor(v)}
+                      title="Borrar vendedor"
+                      aria-label={`Borrar a ${v.nombre}`}
+                      className="flex size-11 items-center justify-center rounded-lg border-2 border-error text-error transition-transform active:scale-[0.98] disabled:opacity-60"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">
+                        delete
+                      </span>
+                    </button>
+                  )}
                   <button
                     disabled={actualizando === v.id}
                     onClick={() =>
@@ -348,7 +380,7 @@ function ClaveRestablecida({
   onCerrar: () => void;
 }) {
   const mensaje = `Hola ${datos.nombre}, tu acceso a la app de rifas quedó restablecido.\n\nUsuario: ${datos.usuario}\nClave: ${datos.clave}\n\nNo la compartas con nadie.`;
-  const enlace = `https://wa.me/${datos.whatsapp.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(mensaje)}`;
+  const enlace = enlaceWhatsapp(datos.whatsapp, mensaje);
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">

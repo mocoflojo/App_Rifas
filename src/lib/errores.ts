@@ -29,6 +29,13 @@ const MENSAJES: Record<string, string> = {
   clave_corta: "La clave debe tener al menos 6 caracteres.",
   nombre_requerido: "Escribe tu nombre completo.",
   vendedor_no_existe: "Ese vendedor ya no existe.",
+  clave_actual_incorrecta: "La clave actual no es correcta.",
+
+  // Eliminar vendedor (migración 0007)
+  vendedor_con_numeros:
+    "Ese vendedor tiene números a su nombre. Libéralos o reasígnalos antes de borrarlo.",
+  vendedor_con_historial:
+    "Ese vendedor tiene pagos registrados. No se puede borrar sin perder ese historial.",
 };
 
 export function mensajeError(error: { message?: string } | null): string {
