@@ -6,6 +6,7 @@ import { AppShell, type NavItem } from "@/components/AppShell";
 import { CambiarClave } from "@/components/CambiarClave";
 import { limpiarSesion, getVendedorToken } from "@/lib/session";
 import { supabase } from "@/lib/supabase";
+import { aplicarVencimientos, type AlertasVendedor } from "@/lib/alertas";
 
 const items: NavItem[] = [
   { href: "/vendedor/resumen", label: "Resumen", icon: "dashboard" },
@@ -60,6 +61,7 @@ export default function VendedorLayout({ children }: { children: React.ReactNode
   const [estado, setEstado] = useState<Estado>("verificando");
   const [nombre, setNombre] = useState("");
   const [mostrarCuenta, setMostrarCuenta] = useState(false);
+  const [alertas, setAlertas] = useState<AlertasVendedor | null>(null);
 
   useEffect(() => {
     let cancelado = false;
@@ -86,6 +88,24 @@ export default function VendedorLayout({ children }: { children: React.ReactNode
       cancelado = true;
     };
   }, []);
+
+  /* Igual que en el panel del admin: primero se aplican los vencimientos,
+     después se cuentan los avisos. Un apartado que acaba de caducar no
+     debe seguir contando como pendiente. */
+  useEffect(() => {
+    if (estado !== "activo") return;
+    let cancelado = false;
+    (async () => {
+      await aplicarVencimientos();
+      const { data } = await supabase.rpc("vendedor_alertas", {
+        p_token: getVendedorToken(),
+      });
+      if (!cancelado && data) setAlertas(data as AlertasVendedor);
+    })();
+    return () => {
+      cancelado = true;
+    };
+  }, [estado]);
 
   function salir() {
     const token = getVendedorToken();
@@ -131,7 +151,14 @@ export default function VendedorLayout({ children }: { children: React.ReactNode
       <AppShell
         titulo="Mis ventas"
         usuario={nombre}
-        items={items}
+        items={items.map((i) => {
+          if (!alertas) return i;
+          if (i.href === "/vendedor/agenda")
+            return { ...i, badge: alertas.agenda };
+          if (i.href === "/vendedor/clientes")
+            return { ...i, badge: alertas.rechazos };
+          return i;
+        })}
         onCuenta={() => setMostrarCuenta(true)}
         onSalir={salir}
       >

@@ -8,7 +8,24 @@ export type NavItem = {
   href: string;
   label: string;
   icon: string;
+  /** Cosas que reclaman atención en esa sección. 0 o ausente = sin aviso. */
+  badge?: number;
 };
+
+/** Contador rojo. Por encima de 9 pasa a "9+" para no deformar el círculo
+ *  en las pantallas chicas. */
+function Badge({ n, flotante }: { n: number; flotante?: boolean }) {
+  return (
+    <span
+      aria-label={`${n} pendientes`}
+      className={`flex min-w-[18px] items-center justify-center rounded-full bg-error px-1 text-[10px] font-bold leading-[18px] text-on-error ${
+        flotante ? "absolute -right-2.5 -top-1" : ""
+      }`}
+    >
+      {n > 9 ? "9+" : n}
+    </span>
+  );
+}
 
 type Props = {
   titulo: string;
@@ -37,6 +54,10 @@ export function AppShell({
 
   const activoEnSecundarios = itemsSecundarios.some((i) => i.href === pathname);
   const todos = [...items, ...itemsSecundarios];
+  const avisosSecundarios = itemsSecundarios.reduce(
+    (s, i) => s + (i.badge ?? 0),
+    0
+  );
 
   return (
     <div className="min-h-dvh bg-background md:flex md:mx-auto md:max-w-[1280px]">
@@ -65,7 +86,8 @@ export function AppShell({
               <span className="material-symbols-outlined text-[20px]">
                 {item.icon}
               </span>
-              {item.label}
+              <span className="flex-1">{item.label}</span>
+              {!!item.badge && <Badge n={item.badge} />}
             </Link>
           );
         })}
@@ -141,7 +163,8 @@ export function AppShell({
                   <span className="material-symbols-outlined text-[20px]">
                     {item.icon}
                   </span>
-                  {item.label}
+                  <span className="flex-1">{item.label}</span>
+                  {!!item.badge && <Badge n={item.badge} />}
                 </Link>
               ))}
             </div>
@@ -159,16 +182,19 @@ export function AppShell({
                 key={item.href}
                 href={item.href}
                 onClick={() => setMenuAbierto(false)}
-                className={`flex flex-1 flex-col items-center justify-center gap-0.5 transition-colors ${
+                className={`relative flex flex-1 flex-col items-center justify-center gap-0.5 transition-colors ${
                   activo ? "text-secondary" : "text-on-surface-variant"
                 }`}
               >
-                <span
-                  className={`material-symbols-outlined text-[22px] ${
-                    activo ? "filled" : ""
-                  }`}
-                >
-                  {item.icon}
+                <span className="relative">
+                  <span
+                    className={`material-symbols-outlined text-[22px] ${
+                      activo ? "filled" : ""
+                    }`}
+                  >
+                    {item.icon}
+                  </span>
+                  {!!item.badge && <Badge n={item.badge} flotante />}
                 </span>
                 <span className="text-[11px] font-semibold tracking-wide">
                   {item.label}
@@ -180,14 +206,21 @@ export function AppShell({
           {itemsSecundarios.length > 0 && (
             <button
               onClick={() => setMenuAbierto((v) => !v)}
-              className={`flex flex-1 flex-col items-center justify-center gap-0.5 transition-colors ${
+              className={`relative flex flex-1 flex-col items-center justify-center gap-0.5 transition-colors ${
                 menuAbierto || activoEnSecundarios
                   ? "text-secondary"
                   : "text-on-surface-variant"
               }`}
             >
-              <span className="material-symbols-outlined text-[22px]">
-                {menuAbierto ? "close" : "more_horiz"}
+              <span className="relative">
+                <span className="material-symbols-outlined text-[22px]">
+                  {menuAbierto ? "close" : "more_horiz"}
+                </span>
+                {/* Lo escondido en "Más" también avisa, si no el aviso se
+                    pierde detrás del menú. */}
+                {!menuAbierto && avisosSecundarios > 0 && (
+                  <Badge n={avisosSecundarios} flotante />
+                )}
               </span>
               <span className="text-[11px] font-semibold tracking-wide">Más</span>
             </button>

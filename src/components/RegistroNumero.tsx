@@ -17,6 +17,7 @@ type Detalle = {
   monto_abonado: number;
   fecha_apartado: string | null;
   fecha_ultimo_abono: string | null;
+  fecha_cobro_pautada: string | null;
   pendiente_confirmacion: boolean;
   nota_rechazo: string | null;
 };
@@ -161,6 +162,8 @@ export function RegistroNumero({ numero, onCerrar, onListo }: Props) {
   const [whatsapp, setWhatsapp] = useState("");
   const [accion, setAccion] = useState<Accion | null>(null);
   const [monto, setMonto] = useState("");
+  /** yyyy-mm-dd para el <input type="date">. */
+  const [fechaCobro, setFechaCobro] = useState("");
 
   useEffect(() => {
     let cancelado = false;
@@ -175,7 +178,10 @@ export function RegistroNumero({ numero, onCerrar, onListo }: Props) {
         supabase.rpc("vendedor_resumen_cupo", { p_token: token }),
       ]);
       if (cancelado) return;
-      setDetalle(Array.isArray(d.data) ? (d.data[0] ?? null) : null);
+      const fila = Array.isArray(d.data) ? (d.data[0] ?? null) : null;
+      setDetalle(fila);
+      // El <input type="date"> solo entiende yyyy-mm-dd.
+      setFechaCobro(fila?.fecha_cobro_pautada?.slice(0, 10) ?? "");
       setConfig(c.data as Config);
       setCupo(q.data as Cupo);
     })();
@@ -450,6 +456,58 @@ export function RegistroNumero({ numero, onCerrar, onListo }: Props) {
             tono="error"
             texto={`El admin rechazó tu venta: "${detalle.nota_rechazo}". Resuélvelo con el cliente y vuelve a intentarlo.`}
           />
+        )}
+
+        {!detalle.pendiente_confirmacion && (
+          <div className="flex flex-col gap-2">
+            <Campo
+              icono="event"
+              etiqueta="Fecha de cobro pautada"
+              type="date"
+              value={fechaCobro}
+              onChange={(e) => setFechaCobro(e.target.value)}
+            />
+            <div className="flex gap-2">
+              <BotonAccion
+                icono="event_available"
+                variante="borde"
+                disabled={enviando || !fechaCobro}
+                onClick={() =>
+                  ejecutar(
+                    () =>
+                      supabase.rpc("vendedor_pautar_cobro", {
+                        p_token: getVendedorToken(),
+                        p_numero: numero,
+                        p_fecha: fechaCobro,
+                      }),
+                    `Cobro del ${etiqueta} pautado para el ${fechaCobro}.`
+                  )
+                }
+              >
+                Pautar cobro
+              </BotonAccion>
+              {detalle.fecha_cobro_pautada && (
+                <BotonAccion
+                  icono="event_busy"
+                  variante="borde"
+                  disabled={enviando}
+                  onClick={() =>
+                    ejecutar(
+                      () =>
+                        supabase.rpc("vendedor_pautar_cobro", {
+                          p_token: getVendedorToken(),
+                          p_numero: numero,
+                          p_fecha: null,
+                        }),
+                      `Se quitó la fecha de cobro del ${etiqueta}.`
+                    )
+                  }
+                >
+                  Quitar
+                </BotonAccion>
+              )}
+            </div>
+          </div>
         )}
 
         {detalle.pendiente_confirmacion ? (

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { AppShell, type NavItem } from "@/components/AppShell";
 import { limpiarSesion, getAdminToken } from "@/lib/session";
 import { supabase } from "@/lib/supabase";
+import { aplicarVencimientos, type AlertasAdmin } from "@/lib/alertas";
 
 /* Diarias: van en la barra inferior. */
 const principales: NavItem[] = [
@@ -25,6 +26,7 @@ const secundarias: NavItem[] = [
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [autorizado, setAutorizado] = useState<boolean | null>(null);
+  const [alertas, setAlertas] = useState<AlertasAdmin | null>(null);
 
   useEffect(() => {
     let cancelado = false;
@@ -43,6 +45,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     };
   }, []);
 
+  /* El barrido de vencimientos corre antes de contar: los avisos deben
+     reflejar el estado ya al día, no el de antes de liberar los caducados. */
+  useEffect(() => {
+    if (!autorizado) return;
+    let cancelado = false;
+    (async () => {
+      await aplicarVencimientos();
+      const { data } = await supabase.rpc("admin_alertas", {
+        p_admin_token: getAdminToken(),
+      });
+      if (!cancelado && data) setAlertas(data as AlertasAdmin);
+    })();
+    return () => {
+      cancelado = true;
+    };
+  }, [autorizado]);
+
   function salir() {
     limpiarSesion();
     router.replace("/");
@@ -56,12 +75,24 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return null;
   }
 
+  const conAvisos = (items: NavItem[]) =>
+    items.map((i) => {
+      if (!alertas) return i;
+      if (i.href === "/admin/confirmar")
+        return { ...i, badge: alertas.por_confirmar };
+      if (i.href === "/admin/vendedores")
+        return { ...i, badge: alertas.metas_por_pagar + alertas.solicitudes };
+      if (i.href === "/admin/vencimientos")
+        return { ...i, badge: alertas.vencimientos };
+      return i;
+    });
+
   return (
     <AppShell
       titulo="Administración"
       usuario="Admin"
-      items={principales}
-      itemsSecundarios={secundarias}
+      items={conAvisos(principales)}
+      itemsSecundarios={conAvisos(secundarias)}
       onSalir={salir}
     >
       {children}

@@ -41,6 +41,29 @@ export function p2AbonoPorVencer(
   );
 }
 
+/** P2b — Alerta de apartado por vencer (admin → vendedor).
+ *  Hermana de P2: el apartado no tiene dinero de por medio, así que el
+ *  aviso es de cupo, no de cobro. */
+export function p2ApartadoPorVencer(
+  vendedor: string,
+  cliente: string,
+  numero: number,
+  diasRestantes: number
+): string {
+  const plazo =
+    diasRestantes <= 0
+      ? "ya se le venció el plazo"
+      : `le ${diasRestantes === 1 ? "queda" : "quedan"} ${diasRestantes} ${
+          diasRestantes === 1 ? "día" : "días"
+        }`;
+  return (
+    `⏰ Hola ${vendedor}, el apartado de ${cliente} ` +
+    `(número #${String(numero).padStart(3, "0")}) ${plazo}. ` +
+    `Si no abona, el número se libera solo y lo pierde. ` +
+    `¿Puedes pasarle buscando el abono?`
+  );
+}
+
 /** P3 — Recordatorio de cobro (vendedor → cliente). */
 export function p3RecordatorioCobro(
   cliente: string,
