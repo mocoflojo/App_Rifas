@@ -67,28 +67,34 @@ const Celda = memo(function Celda({
 function Chip({
   activo,
   onClick,
+  punto,
   children,
 }: {
   activo: boolean;
   onClick: () => void;
+  /** Color del estado que filtra: así el filtro hace también de leyenda. */
+  punto?: string;
   children: React.ReactNode;
 }) {
   return (
     <button
       onClick={onClick}
-      className={`shrink-0 rounded-full px-4 py-2 text-label-caps uppercase transition-colors ${
+      className={`flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-label-caps uppercase transition-colors ${
         activo
           ? "bg-primary text-on-primary"
           : "bg-surface-container text-on-surface-variant"
       }`}
     >
+      {punto && (
+        <span
+          className={`size-2.5 shrink-0 rounded-full ${punto} ${
+            activo ? "ring-2 ring-white/40" : ""
+          }`}
+        />
+      )}
       {children}
     </button>
   );
-}
-
-function Punto({ clase }: { clase: string }) {
-  return <span className={`size-3 shrink-0 rounded-full ${clase}`} />;
 }
 
 /* ------------------------------------------------------------------ */
@@ -203,6 +209,9 @@ export function Talonario({ modo, onAbrir, recarga = 0 }: Props) {
   const visibles = useMemo(() => {
     let lista = numeros ?? [];
     if (filtro === "mios") lista = lista.filter((n) => n.vendedor_id === miId);
+    else if (filtro === "ocupado")
+      // Solo el vendedor filtra así: lo tomado por otros, sin distinguir estado.
+      lista = lista.filter((n) => n.estado !== "libre" && n.vendedor_id !== miId);
     else if (filtro !== "todos") lista = lista.filter((n) => n.estado === filtro);
     if (modo === "admin" && filtroVendedor !== "todos") {
       lista = lista.filter((n) => n.vendedor_id === filtroVendedor);
@@ -301,19 +310,27 @@ export function Talonario({ modo, onAbrir, recarga = 0 }: Props) {
     );
   }
 
-  const filtros: { valor: string; texto: string }[] =
+  /* Cada filtro lleva el punto del color con el que se pinta ese estado en
+     la grilla: una sola fila que filtra y a la vez explica los colores (la
+     leyenda aparte era redundante y se eliminó). */
+  const filtros: { valor: string; texto: string; punto?: string }[] =
     modo === "admin"
       ? [
           { valor: "todos", texto: "Todos" },
-          { valor: "libre", texto: `Libres ${conteos.libre}` },
-          { valor: "apartado", texto: `Apartados ${conteos.apartado}` },
-          { valor: "abonado", texto: `Abonados ${conteos.abonado}` },
-          { valor: "activo", texto: `Vendidos ${conteos.activo}` },
+          { valor: "libre", texto: `Libres ${conteos.libre}`, punto: "bg-estado-libre-fg" },
+          { valor: "apartado", texto: `Apartados ${conteos.apartado}`, punto: "bg-estado-apartado-fg" },
+          { valor: "abonado", texto: `Abonados ${conteos.abonado}`, punto: "bg-estado-abonado-fg" },
+          { valor: "activo", texto: `Vendidos ${conteos.activo}`, punto: "bg-estado-activo-bg" },
         ]
       : [
           { valor: "todos", texto: "Todos" },
-          { valor: "libre", texto: `Libres ${conteos.libre}` },
-          { valor: "mios", texto: `Míos ${conteos.mios}` },
+          { valor: "libre", texto: `Libres ${conteos.libre}`, punto: "bg-estado-libre-fg" },
+          { valor: "mios", texto: `Míos ${conteos.mios}`, punto: "bg-estado-abonado-fg" },
+          {
+            valor: "ocupado",
+            texto: `Ocupados ${1000 - conteos.libre - conteos.mios}`,
+            punto: "bg-outline",
+          },
         ];
 
   const seleccion = numeros.find((n) => n.numero === seleccionado);
@@ -362,10 +379,15 @@ export function Talonario({ modo, onAbrir, recarga = 0 }: Props) {
         />
       </div>
 
-      {/* Filtros */}
-      <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:flex-wrap md:px-0">
+      {/* Filtros con leyenda integrada: envuelven en vez de scrollear */}
+      <div className="flex flex-wrap gap-2">
         {filtros.map((f) => (
-          <Chip key={f.valor} activo={filtro === f.valor} onClick={() => setFiltro(f.valor)}>
+          <Chip
+            key={f.valor}
+            activo={filtro === f.valor}
+            punto={f.punto}
+            onClick={() => setFiltro(f.valor)}
+          >
             {f.texto}
           </Chip>
         ))}
@@ -385,32 +407,6 @@ export function Talonario({ modo, onAbrir, recarga = 0 }: Props) {
           ))}
         </select>
       )}
-
-      {/* Leyenda */}
-      <div className="flex flex-wrap gap-2">
-        {(modo === "admin"
-          ? (["libre", "apartado", "abonado", "activo"] as const)
-          : (["libre", "apartado", "abonado", "activo", "ocupado"] as const)
-        ).map((a) => (
-          <div
-            key={a}
-            className="flex items-center gap-2 rounded-lg bg-surface-container-low px-3 py-2"
-          >
-            <Punto clase={CLASES[a].split(" ")[0]} />
-            <span className="text-[10px] font-bold uppercase tracking-wide text-on-surface-variant">
-              {ETIQUETAS[a]}
-            </span>
-          </div>
-        ))}
-        {modo === "vendedor" && (
-          <div className="flex items-center gap-2 rounded-lg bg-surface-container-low px-3 py-2">
-            <span className="size-1.5 rounded-full bg-on-surface-variant" />
-            <span className="text-[10px] font-bold uppercase tracking-wide text-on-surface-variant">
-              El punto marca los tuyos
-            </span>
-          </div>
-        )}
-      </div>
 
       {/* Grilla */}
       {visibles.length === 0 ? (
@@ -451,7 +447,9 @@ export function Talonario({ modo, onAbrir, recarga = 0 }: Props) {
                 #{String(seleccion.numero).padStart(3, "0")}
               </span>
               <span className="flex w-fit items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide">
-                <Punto clase={CLASES[aparienciaSel].split(" ")[0]} />
+                <span
+                  className={`size-3 shrink-0 rounded-full ${CLASES[aparienciaSel].split(" ")[0]}`}
+                />
                 {ETIQUETAS[aparienciaSel]}
               </span>
             </div>

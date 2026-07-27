@@ -171,7 +171,7 @@ export default function SorteoPage() {
               }}
               inputMode="numeric"
               placeholder={`Premio ${i + 1}`}
-              className="h-14 flex-1 rounded-lg border-0 bg-surface-container-high text-center text-grid-number text-on-surface outline-none focus:ring-2 focus:ring-secondary"
+              className="h-14 min-w-0 flex-1 rounded-lg border-0 bg-surface-container-high text-center text-grid-number text-on-surface outline-none focus:ring-2 focus:ring-secondary"
             />
           ))}
         </div>
