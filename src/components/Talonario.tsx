@@ -482,33 +482,144 @@ export function Talonario({ modo, onAbrir, recarga = 0 }: Props) {
             <DatosDetalle detalle={detalle} modo={modo} />
           )}
 
-          {/* Ficha del admin: historial de cambios */}
+          {/* Ficha del admin: el historial abre en su propio diálogo */}
           {modo === "admin" && !cargandoDetalle && (
             <div className="mt-3 border-t border-white/15 pt-3">
               <button
-                onClick={() => setVerHistorial((v) => !v)}
+                onClick={() => setVerHistorial(true)}
                 className="flex items-center gap-1.5 text-body-sm opacity-90"
               >
                 <span className="material-symbols-outlined text-[16px]">history</span>
-                {verHistorial ? "Ocultar historial" : "Ver historial"}
+                Ver historial
               </button>
-              {verHistorial && (
-                <div className="mt-2 flex max-h-40 flex-col gap-1.5 overflow-y-auto">
-                  {historial === null && (
-                    <div className="h-4 w-32 animate-pulse rounded bg-white/20" />
-                  )}
-                  {historial?.length === 0 && (
-                    <span className="text-body-sm opacity-70">Sin cambios registrados.</span>
-                  )}
-                  {historial?.map((h, i) => (
-                    <div key={i} className="flex flex-col text-[13px] leading-tight opacity-90">
-                      <span>
-                        {h.estado_anterior ?? "—"} → <b>{h.estado_nuevo}</b>
-                        {Number(h.monto_nuevo) !== Number(h.monto_anterior) &&
-                          ` · $${Number(h.monto_anterior).toFixed(2)} → $${Number(h.monto_nuevo).toFixed(2)}`}
-                        {h.pendiente_nuevo && " · por confirmar"}
+            </div>
+          )}
+        </div>
+      )}
+
+      {verHistorial && seleccionado !== null && (
+        <HistorialDialog
+          numero={seleccionado}
+          eventos={historial}
+          onCerrar={() => {
+            setVerHistorial(false);
+            setHistorial(null);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+
+const PUNTO_ESTADO: Record<string, string> = {
+  libre: "bg-estado-libre-fg",
+  apartado: "bg-estado-apartado-fg",
+  abonado: "bg-estado-abonado-fg",
+  activo: "bg-estado-activo-bg",
+};
+
+/** Historial del número en un diálogo centrado, legible y con scroll. */
+function HistorialDialog({
+  numero,
+  eventos,
+  onCerrar,
+}: {
+  numero: number;
+  eventos: Evento[] | null;
+  onCerrar: () => void;
+}) {
+  useEffect(() => {
+    const alPulsar = (e: KeyboardEvent) => e.key === "Escape" && onCerrar();
+    window.addEventListener("keydown", alPulsar);
+    return () => window.removeEventListener("keydown", alPulsar);
+  }, [onCerrar]);
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-end justify-center md:items-center">
+      <button
+        aria-label="Cerrar"
+        onClick={onCerrar}
+        className="absolute inset-0 bg-black/40"
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        className="pb-safe relative flex max-h-[80dvh] w-full flex-col overflow-hidden rounded-t-xl bg-surface-container-lowest shadow-2xl md:max-w-md md:rounded-xl"
+      >
+        <header className="flex h-14 shrink-0 items-center justify-between border-b border-outline-variant/30 px-5">
+          <h2 className="flex items-center gap-2 text-headline text-primary">
+            <span className="material-symbols-outlined text-[20px]">history</span>
+            Historial del #{String(numero).padStart(3, "0")}
+          </h2>
+          <button
+            onClick={onCerrar}
+            aria-label="Cerrar historial"
+            className="flex size-9 items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container"
+          >
+            <span className="material-symbols-outlined text-[20px]">close</span>
+          </button>
+        </header>
+
+        <div className="flex-1 overflow-y-auto p-5">
+          {eventos === null && (
+            <div className="flex flex-col gap-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-12 animate-pulse rounded-lg bg-surface-container" />
+              ))}
+            </div>
+          )}
+
+          {eventos?.length === 0 && (
+            <div className="flex flex-col items-center gap-3 py-8 text-center">
+              <span className="material-symbols-outlined text-[36px] text-outline">
+                history_toggle_off
+              </span>
+              <p className="text-body-sm text-on-surface-variant">
+                Este número no tiene cambios registrados.
+              </p>
+            </div>
+          )}
+
+          {eventos && eventos.length > 0 && (
+            <ol className="flex flex-col">
+              {eventos.map((h, i) => {
+                const cambioMonto =
+                  Number(h.monto_nuevo) !== Number(h.monto_anterior);
+                return (
+                  <li key={i} className="flex gap-3">
+                    {/* Línea de tiempo */}
+                    <div className="flex flex-col items-center">
+                      <span
+                        className={`mt-1.5 size-3 shrink-0 rounded-full ${
+                          PUNTO_ESTADO[h.estado_nuevo] ?? "bg-outline"
+                        }`}
+                      />
+                      {i < eventos.length - 1 && (
+                        <span className="w-px flex-1 bg-outline-variant/50" />
+                      )}
+                    </div>
+                    <div className="flex flex-1 flex-col gap-0.5 pb-4">
+                      <span className="text-body-lg text-on-surface">
+                        {h.estado_anterior
+                          ? (ETIQUETAS[h.estado_anterior as Apariencia] ?? h.estado_anterior)
+                          : "—"}{" "}
+                        →{" "}
+                        <b className="font-semibold">{ETIQUETAS[h.estado_nuevo as Apariencia] ?? h.estado_nuevo}</b>
+                        {h.pendiente_nuevo && (
+                          <span className="ml-2 rounded-full bg-estado-apartado-bg px-2 py-0.5 text-[10px] font-bold uppercase text-estado-apartado-fg">
+                            por confirmar
+                          </span>
+                        )}
                       </span>
-                      <span className="text-[11px] opacity-60">
+                      {cambioMonto && (
+                        <span className="text-body-sm text-secondary">
+                          ${Number(h.monto_anterior).toFixed(2)} → $
+                          {Number(h.monto_nuevo).toFixed(2)}
+                        </span>
+                      )}
+                      <span className="text-body-sm text-on-surface-variant">
                         {new Date(h.fecha).toLocaleString("es-VE", {
                           day: "numeric",
                           month: "short",
@@ -518,13 +629,13 @@ export function Talonario({ modo, onAbrir, recarga = 0 }: Props) {
                         {h.vendedor_nombre && ` · ${h.vendedor_nombre}`}
                       </span>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                  </li>
+                );
+              })}
+            </ol>
           )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
