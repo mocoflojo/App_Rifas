@@ -291,7 +291,7 @@ export default function ConfigPage() {
                 value={p.nombre}
                 onChange={(e) => actualizarPremio(i, "nombre", e.target.value)}
                 placeholder="Nombre del premio"
-                className="h-11 flex-1 rounded-lg border-0 bg-surface-container-high px-3 text-body-sm text-on-surface outline-none focus:ring-2 focus:ring-secondary"
+                className="h-11 min-w-0 flex-1 rounded-lg border-0 bg-surface-container-high px-3 text-body-sm text-on-surface outline-none focus:ring-2 focus:ring-secondary"
               />
               <input
                 type="number"
@@ -299,7 +299,7 @@ export default function ConfigPage() {
                 value={p.valor}
                 onChange={(e) => actualizarPremio(i, "valor", e.target.value)}
                 placeholder="Valor $"
-                className="h-11 w-28 rounded-lg border-0 bg-surface-container-high px-3 text-body-sm text-on-surface outline-none focus:ring-2 focus:ring-secondary"
+                className="h-11 w-24 shrink-0 rounded-lg border-0 bg-surface-container-high px-3 text-body-sm text-on-surface outline-none focus:ring-2 focus:ring-secondary"
               />
               <button
                 onClick={() => quitarPremio(i)}
