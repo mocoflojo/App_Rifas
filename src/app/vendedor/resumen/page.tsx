@@ -28,20 +28,26 @@ type Resumen = {
 
 const dinero = (n: number) => `$${Number(n).toFixed(2)}`;
 
-/** Tarjeta pequeña de conteo por estado. */
+/** Tarjeta pequeña de conteo por estado, con el color del estado que cuenta. */
 function Contador({
   icono,
   valor,
   etiqueta,
+  chip,
 }: {
   icono: string;
   valor: number;
   etiqueta: string;
+  chip: string;
 }) {
   return (
-    <div className="flex flex-1 flex-col items-center gap-1 rounded-lg bg-surface-container-low px-2 py-3">
-      <span className="material-symbols-outlined text-[20px] text-on-surface-variant">
-        {icono}
+    <div className="flex flex-1 flex-col items-center gap-1.5 rounded-xl bg-surface-container-lowest px-2 py-3 shadow-[0_10px_25px_rgba(26,82,118,0.05)]">
+      <span
+        className={`flex size-9 items-center justify-center rounded-full ${chip}`}
+      >
+        <span className="material-symbols-outlined filled text-[18px]">
+          {icono}
+        </span>
       </span>
       <span className="text-headline text-on-surface">{valor}</span>
       <span className="text-center text-[10px] font-bold uppercase leading-tight text-on-surface-variant">
@@ -180,14 +186,18 @@ export default function ResumenVendedorPage() {
 
       {/* Cifras del mes */}
       <div className="grid grid-cols-2 gap-3">
-        <div className="flex flex-col gap-1 rounded-xl bg-surface-container-lowest p-4 shadow-[0_10px_25px_rgba(26,82,118,0.05)]">
-          <span className="flex items-center gap-1.5 text-label-caps uppercase text-on-surface-variant">
-            <span className="material-symbols-outlined text-[16px]">
-              confirmation_number
+        <div className="flex flex-col gap-2 rounded-xl bg-surface-container-lowest p-4 shadow-[0_10px_25px_rgba(26,82,118,0.05)]">
+          <div className="flex items-center gap-2">
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-estado-abonado-bg text-primary">
+              <span className="material-symbols-outlined filled text-[16px]">
+                confirmation_number
+              </span>
             </span>
-            Tickets activos
-          </span>
-          <span className="text-display-mobile text-on-surface">
+            <span className="text-label-caps uppercase leading-tight text-on-surface-variant">
+              Tickets activos
+            </span>
+          </div>
+          <span className="text-display-mobile text-primary">
             {datos.tickets_activos}
           </span>
           <span className="text-body-sm text-on-surface-variant">
@@ -195,11 +205,17 @@ export default function ResumenVendedorPage() {
           </span>
         </div>
 
-        <div className="flex flex-col gap-1 rounded-xl bg-surface-container-lowest p-4 shadow-[0_10px_25px_rgba(26,82,118,0.05)]">
-          <span className="flex items-center gap-1.5 text-label-caps uppercase text-on-surface-variant">
-            <span className="material-symbols-outlined text-[16px]">payments</span>
-            Comisiones
-          </span>
+        <div className="flex flex-col gap-2 rounded-xl bg-surface-container-lowest p-4 shadow-[0_10px_25px_rgba(26,82,118,0.05)]">
+          <div className="flex items-center gap-2">
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-estado-libre-bg text-estado-activo-bg">
+              <span className="material-symbols-outlined filled text-[16px]">
+                payments
+              </span>
+            </span>
+            <span className="text-label-caps uppercase leading-tight text-on-surface-variant">
+              Comisiones
+            </span>
+          </div>
           <span className="text-display-mobile text-secondary">
             {dinero(datos.comision_pagada)}
           </span>
@@ -210,14 +226,25 @@ export default function ResumenVendedorPage() {
         </div>
       </div>
 
-      {/* Estado de sus números */}
+      {/* Estado de sus números, cada uno con su color del talonario */}
       <div className="flex gap-2">
-        <Contador icono="bookmark" valor={datos.apartados} etiqueta="Apartados" />
-        <Contador icono="savings" valor={datos.abonados} etiqueta="Abonados" />
+        <Contador
+          icono="bookmark"
+          valor={datos.apartados}
+          etiqueta="Apartados"
+          chip="bg-estado-apartado-bg text-estado-apartado-fg"
+        />
+        <Contador
+          icono="savings"
+          valor={datos.abonados}
+          etiqueta="Abonados"
+          chip="bg-estado-abonado-bg text-estado-abonado-fg"
+        />
         <Contador
           icono="hourglass_top"
           valor={datos.pendientes}
           etiqueta="Por confirmar"
+          chip="bg-primary-fixed text-primary"
         />
       </div>
 

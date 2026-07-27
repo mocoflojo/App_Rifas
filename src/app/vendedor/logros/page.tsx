@@ -64,7 +64,7 @@ function Insignia({
     >
       <div
         className={`flex size-16 items-center justify-center rounded-full text-[32px] ${
-          bloqueado ? "grayscale opacity-30" : ""
+          bloqueado ? "bg-surface-container grayscale opacity-30" : def.color
         }`}
       >
         {def.emoji}
@@ -298,22 +298,50 @@ export default function LogrosPage() {
 
       {/* Racha y posición */}
       <div className="grid grid-cols-2 gap-3">
-        <div className="flex flex-col gap-1 rounded-xl bg-surface-container-low p-4">
-          <span className="flex items-center gap-1.5 text-label-caps uppercase text-on-surface-variant">
-            <span className="material-symbols-outlined text-[16px]">
+        {/* Con racha viva, la tarjeta arde; sin racha, la llama está apagada. */}
+        <div
+          className={`relative flex flex-col gap-1 overflow-hidden rounded-xl p-4 ${
+            racha > 0
+              ? "bg-linear-to-br from-status-pending via-[#ea580c] to-error text-white shadow-lg"
+              : "bg-surface-container-low"
+          }`}
+        >
+          {racha > 0 && (
+            <span className="material-symbols-outlined filled pointer-events-none absolute -bottom-3 -right-2 text-[80px] opacity-25">
+              local_fire_department
+            </span>
+          )}
+          <span
+            className={`flex items-center gap-1.5 text-label-caps uppercase ${
+              racha > 0 ? "opacity-90" : "text-on-surface-variant"
+            }`}
+          >
+            <span
+              className={`material-symbols-outlined text-[16px] ${
+                racha > 0 ? "filled" : ""
+              }`}
+            >
               local_fire_department
             </span>
             Racha
           </span>
-          <span className="text-display-mobile text-on-surface">
+          <span
+            className={`text-display-mobile ${
+              racha > 0 ? "text-white" : "text-on-surface"
+            }`}
+          >
             {racha} {racha === 1 ? "mes" : "meses"}
           </span>
-          <span className="text-body-sm text-on-surface-variant">
+          <span
+            className={`text-body-sm ${
+              racha > 0 ? "opacity-90" : "text-on-surface-variant"
+            }`}
+          >
             {racha === 0
-              ? "Completa tu cupo este mes para empezar."
+              ? "Completa tu cupo este mes para encenderla."
               : racha < 3
                 ? `Van ${racha} de 3 para "En racha".`
-                : "¡Racha activa!"}
+                : "¡Estás que ardes!"}
           </span>
         </div>
 
