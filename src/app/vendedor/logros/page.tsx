@@ -10,14 +10,17 @@ type LogroGanado = {
   fecha: string;
   mes: string;
   visto: boolean;
+  pagado: boolean;
 };
 
 type Resumen = {
   cupo: number;
   meta_tickets: number;
+  dias_vendedor_rapido: number;
 };
 
 type Posicion = { posicion: number; total: number; tickets_activos: number };
+type Colectivo = { activos: number; meta: number; alcanzada: boolean };
 
 function fechaCorta(iso: string) {
   return new Date(iso).toLocaleDateString("es-VE", {
@@ -31,15 +34,25 @@ function Insignia({
   id,
   ganado,
   cupo,
-  meta,
+  dias,
+  mesActual,
 }: {
   id: LogroId;
   ganado: LogroGanado | null;
   cupo: number;
-  meta: number;
+  dias: number;
+  mesActual: string;
 }) {
   const def = CATALOGO_LOGROS[id];
   const bloqueado = !ganado;
+  /** Ganado, pero el dinero espera a que el equipo llegue a la meta
+   *  colectiva. Solo aplica al mes en curso: si el mes cerró sin alcanzar
+   *  la meta, ese bono ya no se paga y el chip sería una promesa falsa. */
+  const pendienteDeEquipo =
+    !!ganado &&
+    def.requiereMetaColectiva &&
+    !ganado.pagado &&
+    ganado.mes === mesActual;
 
   return (
     <div
@@ -65,16 +78,25 @@ function Insignia({
           {def.nombre}
         </span>
         <span className="text-body-sm text-on-surface-variant">
-          {def.descripcion(cupo, meta)}
+          {def.descripcion(cupo, dias)}
         </span>
       </div>
       {ganado ? (
-        <span className="flex items-center gap-1 rounded-full bg-estado-libre-bg px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-estado-activo-bg">
-          <span className="material-symbols-outlined text-[14px]">
-            check_circle
+        pendienteDeEquipo ? (
+          <span className="flex items-center gap-1 rounded-full bg-estado-apartado-bg px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-estado-apartado-fg">
+            <span className="material-symbols-outlined text-[14px]">
+              hourglass_top
+            </span>
+            Ganado · espera a la meta del equipo
           </span>
-          {fechaCorta(ganado.fecha)}
-        </span>
+        ) : (
+          <span className="flex items-center gap-1 rounded-full bg-estado-libre-bg px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-estado-activo-bg">
+            <span className="material-symbols-outlined text-[14px]">
+              check_circle
+            </span>
+            {fechaCorta(ganado.fecha)}
+          </span>
+        )
       ) : def.soloAlCierre ? (
         <span className="rounded-full bg-surface-container-high px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-on-surface-variant">
           Se otorga al cerrar el mes
@@ -94,12 +116,14 @@ function Insignia({
 function Celebracion({
   nuevos,
   cupo,
-  meta,
+  dias,
+  mesActual,
   onCerrar,
 }: {
   nuevos: LogroGanado[];
   cupo: number;
-  meta: number;
+  dias: number;
+  mesActual: string;
   onCerrar: () => void;
 }) {
   return (
@@ -133,10 +157,23 @@ function Celebracion({
           <p className="text-body-sm text-on-surface-variant">
             {nuevos
               .map((n) =>
-                CATALOGO_LOGROS[n.logro_id as LogroId]?.descripcion(cupo, meta)
+                CATALOGO_LOGROS[n.logro_id as LogroId]?.descripcion(cupo, dias)
               )
               .join(" ")}
           </p>
+          {nuevos.some(
+            (n) =>
+              CATALOGO_LOGROS[n.logro_id as LogroId]?.requiereMetaColectiva &&
+              !n.pagado &&
+              n.mes === mesActual
+          ) && (
+            <p className="mt-1 flex items-center justify-center gap-1.5 text-body-sm font-semibold text-estado-apartado-fg">
+              <span className="material-symbols-outlined text-[16px]">
+                groups
+              </span>
+              El dinero se libera cuando el equipo llegue a su meta colectiva.
+            </p>
+          )}
         </div>
         <button
           onClick={onCerrar}
@@ -156,18 +193,22 @@ export default function LogrosPage() {
   const [ganados, setGanados] = useState<LogroGanado[] | null>(null);
   const [resumen, setResumen] = useState<Resumen | null>(null);
   const [posicion, setPosicion] = useState<Posicion | null>(null);
+  const [colectivo, setColectivo] = useState<Colectivo | null>(null);
   const [racha, setRacha] = useState(0);
+  const [mesActual, setMesActual] = useState("");
   const [celebrando, setCelebrando] = useState(false);
 
   useEffect(() => {
     let cancelado = false;
     (async () => {
       const token = getVendedorToken();
-      const [l, r, p, ra] = await Promise.all([
+      const [l, r, p, ra, col, cfg] = await Promise.all([
         supabase.rpc("vendedor_mis_logros", { p_token: token }),
         supabase.rpc("vendedor_resumen_comisiones", { p_token: token }),
         supabase.rpc("vendedor_posicion", { p_token: token }),
         supabase.rpc("vendedor_racha_actual", { p_token: token }),
+        supabase.rpc("vendedor_progreso_colectivo", { p_token: token }),
+        supabase.rpc("config_publica"),
       ]);
       if (cancelado) return;
       const lista = (l.data as LogroGanado[]) ?? [];
@@ -175,6 +216,8 @@ export default function LogrosPage() {
       if (r.data) setResumen(r.data as Resumen);
       if (p.data) setPosicion(p.data as Posicion);
       if (typeof ra.data === "number") setRacha(ra.data);
+      if (col.data) setColectivo(col.data as Colectivo);
+      if (cfg.data?.mes_actual) setMesActual(cfg.data.mes_actual as string);
       if (lista.some((n) => !n.visto)) setCelebrando(true);
     })();
     return () => {
@@ -207,10 +250,51 @@ export default function LogrosPage() {
 
   const porId = new Map(ganados.map((g) => [g.logro_id, g]));
   const nuevos = ganados.filter((g) => !g.visto);
+  const progresoColectivo = colectivo
+    ? Math.min((colectivo.activos / colectivo.meta) * 100, 100)
+    : 0;
 
   return (
     <div className="flex flex-col gap-5">
       <h1 className="text-display-mobile text-primary">Mis logros</h1>
+
+      {/* Meta colectiva del equipo */}
+      {colectivo && (
+        <section
+          className={`relative flex flex-col gap-3 overflow-hidden rounded-xl p-6 shadow-xl ${
+            colectivo.alcanzada
+              ? "bg-estado-activo-bg text-estado-activo-fg"
+              : "bg-primary text-on-primary"
+          }`}
+        >
+          <span className="material-symbols-outlined filled pointer-events-none absolute -right-4 -top-4 text-[110px] opacity-10">
+            groups
+          </span>
+          <span className="text-label-caps uppercase tracking-widest opacity-80">
+            Meta colectiva del equipo
+          </span>
+          <div className="flex items-baseline gap-2">
+            <span className="text-display-lg">{colectivo.activos}</span>
+            <span className="text-body-lg opacity-70">
+              de {colectivo.meta} tickets activos
+            </span>
+          </div>
+          <div className="h-3 w-full overflow-hidden rounded-full bg-white/20">
+            <div
+              className="h-full rounded-full bg-secondary-fixed transition-all duration-700"
+              style={{ width: `${progresoColectivo}%` }}
+            />
+          </div>
+          <span className="flex items-center gap-1.5 text-body-sm opacity-90">
+            <span className="material-symbols-outlined text-[16px]">
+              {colectivo.alcanzada ? "check_circle" : "info"}
+            </span>
+            {colectivo.alcanzada
+              ? "¡Meta alcanzada! Los bonos del equipo ya se están pagando."
+              : "Al llegar entre todos a esta meta, se liberan los bonos de cupo completo, vendedor rápido y racha."}
+          </span>
+        </section>
+      )}
 
       {/* Racha y posición */}
       <div className="grid grid-cols-2 gap-3">
@@ -261,7 +345,8 @@ export default function LogrosPage() {
             id={id}
             ganado={porId.get(id) ?? null}
             cupo={resumen.cupo}
-            meta={resumen.meta_tickets}
+            dias={resumen.dias_vendedor_rapido}
+            mesActual={mesActual}
           />
         ))}
       </div>
@@ -270,7 +355,8 @@ export default function LogrosPage() {
         <Celebracion
           nuevos={nuevos}
           cupo={resumen.cupo}
-          meta={resumen.meta_tickets}
+          dias={resumen.dias_vendedor_rapido}
+          mesActual={mesActual}
           onCerrar={cerrarCelebracion}
         />
       )}

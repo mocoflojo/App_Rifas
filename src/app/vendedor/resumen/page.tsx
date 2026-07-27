@@ -7,6 +7,8 @@ import { getVendedorToken } from "@/lib/session";
 import { ListaPagos, type Pago } from "@/components/ListaPagos";
 import type { AlertasVendedor } from "@/lib/alertas";
 
+type Colectivo = { activos: number; meta: number; alcanzada: boolean };
+
 type Resumen = {
   nombre: string;
   cupo: number;
@@ -53,20 +55,23 @@ export default function ResumenVendedorPage() {
   const [datos, setDatos] = useState<Resumen | null>(null);
   const [pagos, setPagos] = useState<Pago[]>([]);
   const [alertas, setAlertas] = useState<AlertasVendedor | null>(null);
+  const [colectivo, setColectivo] = useState<Colectivo | null>(null);
 
   useEffect(() => {
     let cancelado = false;
     (async () => {
       const token = getVendedorToken();
-      const [r, p, a] = await Promise.all([
+      const [r, p, a, col] = await Promise.all([
         supabase.rpc("vendedor_resumen_comisiones", { p_token: token }),
         supabase.rpc("vendedor_mis_pagos", { p_token: token }),
         supabase.rpc("vendedor_alertas", { p_token: token }),
+        supabase.rpc("vendedor_progreso_colectivo", { p_token: token }),
       ]);
       if (cancelado) return;
       if (!r.error && r.data) setDatos(r.data as Resumen);
       if (!p.error && p.data) setPagos(p.data as Pago[]);
       if (!a.error && a.data) setAlertas(a.data as AlertasVendedor);
+      if (!col.error && col.data) setColectivo(col.data as Colectivo);
     })();
     return () => {
       cancelado = true;
@@ -215,6 +220,52 @@ export default function ResumenVendedorPage() {
           etiqueta="Por confirmar"
         />
       </div>
+
+      {/* Meta colectiva del equipo */}
+      {colectivo && (
+        <Link
+          href="/vendedor/logros"
+          className={`flex flex-col gap-2 rounded-xl p-4 transition-transform active:scale-[0.99] ${
+            colectivo.alcanzada
+              ? "bg-estado-activo-bg text-estado-activo-fg"
+              : "bg-surface-container-lowest shadow-[0_10px_25px_rgba(26,82,118,0.05)]"
+          }`}
+        >
+          <div className="flex items-center justify-between gap-2">
+            <span
+              className={`flex items-center gap-1.5 text-label-caps uppercase ${
+                colectivo.alcanzada ? "opacity-90" : "text-on-surface-variant"
+              }`}
+            >
+              <span className="material-symbols-outlined text-[16px]">groups</span>
+              Meta colectiva del equipo
+            </span>
+            <span
+              className={`text-body-sm font-bold ${
+                colectivo.alcanzada ? "" : "text-primary"
+              }`}
+            >
+              {colectivo.activos} / {colectivo.meta}
+            </span>
+          </div>
+          <div
+            className={`h-2.5 w-full overflow-hidden rounded-full ${
+              colectivo.alcanzada ? "bg-white/25" : "bg-surface-container-highest"
+            }`}
+          >
+            <div
+              className={`h-full rounded-full transition-all duration-700 ${
+                colectivo.alcanzada
+                  ? "bg-secondary-fixed"
+                  : "bg-linear-to-r from-primary to-secondary"
+              }`}
+              style={{
+                width: `${Math.min((colectivo.activos / colectivo.meta) * 100, 100)}%`,
+              }}
+            />
+          </div>
+        </Link>
+      )}
 
       {/* Historial de comisiones */}
       <section className="flex flex-col gap-3">

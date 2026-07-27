@@ -1,56 +1,75 @@
-/** Catálogo de insignias (§11 del discovery). Los nombres, iconos y
- *  descripciones son presentación pura; la condición real vive en
- *  _verificar_logros (migración 0012). */
+/** Catálogo de insignias (§11 del discovery, ampliado en la Fase 9 con el
+ *  sistema de bonos y meta colectiva). Los nombres, iconos y descripciones
+ *  son presentación pura; la condición real vive en _verificar_logros y
+ *  cierre_mes (migración 0013).
+ *
+ *  "primera_meta" se eliminó del catálogo: no premiaba nada que no fuera a
+ *  pasar solo, ya que el vendedor persigue la comisión de $60/10 tickets
+ *  de todos modos. Las filas históricas de vendedores que ya la ganaron
+ *  simplemente no aparecen (el motor dejó de otorgarlas). */
 
 export type LogroId =
-  | "primera_meta"
   | "vendedor_rapido"
   | "sesenta"
   | "racha_3"
-  | "top_mes";
+  | "top_mes_1"
+  | "top_mes_2"
+  | "top_mes_3";
 
 type DefinicionLogro = {
   emoji: string;
   nombre: string;
-  /** cupo/meta se sustituyen con los valores reales de config del vendedor. */
-  descripcion: (cupo: number, meta: number) => string;
-  /** Solo la otorga el cierre de mes (Fase 9): no hay forma de "ir progresando". */
+  descripcion: (cupo: number, dias: number) => string;
+  /** Solo se resuelve al cerrar el mes: no hay forma de "ir progresando". */
   soloAlCierre?: boolean;
+  /** El dinero depende de que el equipo llegue a la meta colectiva. */
+  requiereMetaColectiva?: boolean;
 };
 
 export const CATALOGO_LOGROS: Record<LogroId, DefinicionLogro> = {
-  primera_meta: {
-    emoji: "🥉",
-    nombre: "Primera meta",
-    descripcion: (_cupo, meta) => `Completaste tu primer bloque de ${meta} tickets activos.`,
-  },
   vendedor_rapido: {
     emoji: "⚡",
     nombre: "Vendedor rápido",
-    descripcion: () => "30 tickets activos antes del día 8 del mes.",
+    descripcion: (_cupo, dias) => `30 tickets activos antes del día ${dias} del mes.`,
+    requiereMetaColectiva: true,
   },
   sesenta: {
     emoji: "💎",
     nombre: "Cupo completo",
     descripcion: (cupo) => `Alcanzaste tus ${cupo} tickets activos del mes.`,
+    requiereMetaColectiva: true,
   },
   racha_3: {
     emoji: "🔥",
     nombre: "En racha",
     descripcion: (cupo) => `Cupo completo (${cupo}/${cupo}) tres meses seguidos.`,
+    requiereMetaColectiva: true,
   },
-  top_mes: {
+  top_mes_1: {
     emoji: "👑",
-    nombre: "Top vendedor",
-    descripcion: () => "Quien más tickets activos tuvo al cerrar el mes.",
+    nombre: "Top vendedor #1",
+    descripcion: () => "El que más tickets activos tuvo al cerrar el mes.",
+    soloAlCierre: true,
+  },
+  top_mes_2: {
+    emoji: "🥈",
+    nombre: "Top vendedor #2",
+    descripcion: () => "Segundo lugar en tickets activos al cerrar el mes.",
+    soloAlCierre: true,
+  },
+  top_mes_3: {
+    emoji: "🥉",
+    nombre: "Top vendedor #3",
+    descripcion: () => "Tercer lugar en tickets activos al cerrar el mes.",
     soloAlCierre: true,
   },
 };
 
 export const ORDEN_LOGROS: LogroId[] = [
-  "primera_meta",
   "vendedor_rapido",
   "sesenta",
   "racha_3",
-  "top_mes",
+  "top_mes_1",
+  "top_mes_2",
+  "top_mes_3",
 ];
