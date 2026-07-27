@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { getAdminToken } from "@/lib/session";
 import { mensajeError } from "@/lib/errores";
@@ -27,6 +28,9 @@ type Confirmado = {
   cliente_whatsapp: string | null;
   vendedor_nombre: string;
   tickets_activos: number;
+  /* Metas de comisión ganadas y todavía sin pagar (§12.3). */
+  pago_meta: number;
+  metas_disponibles: number;
 };
 
 const etiqueta = (n: number) => `#${String(n).padStart(3, "0")}`;
@@ -329,7 +333,9 @@ function ActivadoDialog({
   premios: Premio[];
   onCerrar: () => void;
 }) {
-  const meta = datos.tickets_activos % 10 === 0;
+  /* El dato viene de la base, no de un módulo en el cliente: si el admin
+     cambia la meta en Configuración, el aviso sigue siendo correcto. */
+  const porPagar = datos.metas_disponibles * Number(datos.pago_meta);
   const mensaje = p1Confirmacion(datos.cliente_nombre, datos.numero, premios);
 
   return (
@@ -357,11 +363,25 @@ function ActivadoDialog({
           </p>
         </div>
 
-        {meta && (
-          <div className="flex items-start gap-2 rounded-lg bg-estado-libre-bg px-4 py-3 text-body-sm text-estado-activo-bg">
-            <span className="material-symbols-outlined text-[18px]">emoji_events</span>
-            ¡{datos.vendedor_nombre} completó una meta de 10! Recuerda pagarle sus $60.
-          </div>
+        {datos.metas_disponibles > 0 && (
+          <Link
+            href="/admin/vendedores"
+            className="flex items-start gap-2 rounded-lg bg-estado-libre-bg px-4 py-3 text-body-sm font-semibold text-estado-activo-bg transition-transform active:scale-[0.99]"
+          >
+            <span className="material-symbols-outlined filled text-[18px]">
+              emoji_events
+            </span>
+            <span className="flex-1">
+              ¡{datos.vendedor_nombre} tiene{" "}
+              {datos.metas_disponibles === 1
+                ? "una meta completa"
+                : `${datos.metas_disponibles} metas completas`}
+              ! Págale ${porPagar.toFixed(2)} en Vendedores.
+            </span>
+            <span className="material-symbols-outlined text-[18px]">
+              chevron_right
+            </span>
+          </Link>
         )}
 
         {datos.cliente_whatsapp ? (

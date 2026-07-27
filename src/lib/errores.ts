@@ -39,6 +39,10 @@ const MENSAJES: Record<string, string> = {
 
   // Confirmación (migración 0008)
   nota_requerida: "Escribe el motivo del rechazo: el vendedor lo va a leer.",
+
+  // Comisiones (migración 0009)
+  sin_meta_disponible:
+    "Ese vendedor no tiene metas por cobrar ahora mismo. Recarga la pantalla para ver sus datos al día.",
 };
 
 export function mensajeError(error: { message?: string } | null): string {

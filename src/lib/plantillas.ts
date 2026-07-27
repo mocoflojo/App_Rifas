@@ -69,6 +69,21 @@ export function p4RecordatorioApartado(
   );
 }
 
+/** P6 — Comprobante de pago de meta (admin → vendedor).
+ *  Va dirigido al vendedor, no al comprador: aquí sí se habla de comisión. */
+export function p6PagoMeta(
+  vendedor: string,
+  monto: number,
+  metaNumero: number,
+  ticketsActivos: number
+): string {
+  return (
+    `💰 Hola ${vendedor}, te pagué la comisión de tu meta ${metaNumero}: ` +
+    `${dinero(monto)}. Vas por ${ticketsActivos} tickets activos este mes. ` +
+    `¡Sigue así! 🏍️`
+  );
+}
+
 /** P5 — Notificación de ganador (admin → comprador). */
 export function p5Ganador(nombre: string, numero: number, valorPremio: number): string {
   return (
