@@ -36,6 +36,9 @@ const MENSAJES: Record<string, string> = {
     "Ese vendedor tiene números a su nombre. Libéralos o reasígnalos antes de borrarlo.",
   vendedor_con_historial:
     "Ese vendedor tiene pagos registrados. No se puede borrar sin perder ese historial.",
+
+  // Confirmación (migración 0008)
+  nota_requerida: "Escribe el motivo del rechazo: el vendedor lo va a leer.",
 };
 
 export function mensajeError(error: { message?: string } | null): string {

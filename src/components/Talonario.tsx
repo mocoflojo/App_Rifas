@@ -95,6 +95,16 @@ function Punto({ clase }: { clase: string }) {
 
 type Detalle = Record<string, unknown> | null;
 
+type Evento = {
+  fecha: string;
+  estado_anterior: string | null;
+  estado_nuevo: string;
+  monto_anterior: number;
+  monto_nuevo: number;
+  pendiente_nuevo: boolean;
+  vendedor_nombre: string | null;
+};
+
 type Props = {
   modo: "admin" | "vendedor";
   /** Habilita el botón de acción sobre números libres o propios. */
@@ -201,10 +211,15 @@ export function Talonario({ modo, onAbrir, recarga = 0 }: Props) {
   }, [numeros, filtro, filtroVendedor, modo, miId]);
 
   /* --- Selección ---------------------------------------------------- */
+  /* Ficha del admin: historial de cambios del número (Fase 5). */
+  const [historial, setHistorial] = useState<Evento[] | null>(null);
+  const [verHistorial, setVerHistorial] = useState(false);
+
   const seleccionar = useCallback(
     async (numero: number) => {
       setSeleccionado(numero);
       setDetalle(null);
+      setHistorial(null);
       setCargandoDetalle(true);
       const { data } =
         modo === "admin"
@@ -221,6 +236,22 @@ export function Talonario({ modo, onAbrir, recarga = 0 }: Props) {
     },
     [modo]
   );
+
+  useEffect(() => {
+    if (modo !== "admin" || seleccionado === null || !verHistorial) return;
+    let cancelado = false;
+    supabase
+      .rpc("admin_numero_historial", {
+        p_admin_token: getAdminToken(),
+        p_numero: seleccionado,
+      })
+      .then(({ data }) => {
+        if (!cancelado && data) setHistorial(data as Evento[]);
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, [modo, seleccionado, verHistorial]);
 
   /* Un único listener delegado en el contenedor, no 1,000 closures. */
   const clicEnGrilla = useCallback(
@@ -252,6 +283,8 @@ export function Talonario({ modo, onAbrir, recarga = 0 }: Props) {
   function cerrarDetalle() {
     setSeleccionado(null);
     setDetalle(null);
+    setHistorial(null);
+    setVerHistorial(false);
   }
 
   /* --- Render ------------------------------------------------------- */
@@ -447,6 +480,48 @@ export function Talonario({ modo, onAbrir, recarga = 0 }: Props) {
 
           {!cargandoDetalle && detalle && (
             <DatosDetalle detalle={detalle} modo={modo} />
+          )}
+
+          {/* Ficha del admin: historial de cambios */}
+          {modo === "admin" && !cargandoDetalle && (
+            <div className="mt-3 border-t border-white/15 pt-3">
+              <button
+                onClick={() => setVerHistorial((v) => !v)}
+                className="flex items-center gap-1.5 text-body-sm opacity-90"
+              >
+                <span className="material-symbols-outlined text-[16px]">history</span>
+                {verHistorial ? "Ocultar historial" : "Ver historial"}
+              </button>
+              {verHistorial && (
+                <div className="mt-2 flex max-h-40 flex-col gap-1.5 overflow-y-auto">
+                  {historial === null && (
+                    <div className="h-4 w-32 animate-pulse rounded bg-white/20" />
+                  )}
+                  {historial?.length === 0 && (
+                    <span className="text-body-sm opacity-70">Sin cambios registrados.</span>
+                  )}
+                  {historial?.map((h, i) => (
+                    <div key={i} className="flex flex-col text-[13px] leading-tight opacity-90">
+                      <span>
+                        {h.estado_anterior ?? "—"} → <b>{h.estado_nuevo}</b>
+                        {Number(h.monto_nuevo) !== Number(h.monto_anterior) &&
+                          ` · $${Number(h.monto_anterior).toFixed(2)} → $${Number(h.monto_nuevo).toFixed(2)}`}
+                        {h.pendiente_nuevo && " · por confirmar"}
+                      </span>
+                      <span className="text-[11px] opacity-60">
+                        {new Date(h.fecha).toLocaleString("es-VE", {
+                          day: "numeric",
+                          month: "short",
+                          hour: "numeric",
+                          minute: "2-digit",
+                        })}
+                        {h.vendedor_nombre && ` · ${h.vendedor_nombre}`}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
         </div>
       )}

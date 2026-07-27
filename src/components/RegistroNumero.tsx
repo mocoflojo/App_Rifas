@@ -18,6 +18,7 @@ type Detalle = {
   fecha_apartado: string | null;
   fecha_ultimo_abono: string | null;
   pendiente_confirmacion: boolean;
+  nota_rechazo: string | null;
 };
 
 type Config = {
@@ -443,6 +444,13 @@ export function RegistroNumero({ numero, onCerrar, onListo }: Props) {
             />
           </div>
         </div>
+
+        {detalle.nota_rechazo && (
+          <Aviso
+            tono="error"
+            texto={`El admin rechazó tu venta: "${detalle.nota_rechazo}". Resuélvelo con el cliente y vuelve a intentarlo.`}
+          />
+        )}
 
         {detalle.pendiente_confirmacion ? (
           <Aviso
