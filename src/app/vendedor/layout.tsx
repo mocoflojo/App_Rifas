@@ -7,6 +7,7 @@ import { CambiarClave } from "@/components/CambiarClave";
 import { limpiarSesion, getVendedorToken } from "@/lib/session";
 import { supabase } from "@/lib/supabase";
 import { aplicarVencimientos, type AlertasVendedor } from "@/lib/alertas";
+import { fechaLarga } from "@/lib/sorteo";
 
 const items: NavItem[] = [
   { href: "/vendedor/resumen", label: "Resumen", icon: "dashboard" },
@@ -53,6 +54,50 @@ function Aviso({
         Salir
       </button>
     </main>
+  );
+}
+
+/** Aviso de cabecera cuando el talonario no está en venta normal. Vive en el
+ *  layout y no en cada pantalla porque la fase afecta a todas por igual: sin
+ *  esto, el vendedor descubre que no puede vender recién al tocar un número
+ *  y recibir un error. En fase "venta" no muestra nada. */
+function BannerFase({ a }: { a: AlertasVendedor }) {
+  const aviso = {
+    sin_sorteo: {
+      icono: "event_busy",
+      clase: "bg-surface-container-highest text-on-surface-variant",
+      texto:
+        "No hay ningún sorteo abierto. Espera a que el admin programe el próximo para volver a vender.",
+    },
+    programado: {
+      icono: "event_upcoming",
+      clase: "bg-estado-abonado-bg text-estado-abonado-fg",
+      texto: `${a.etiqueta} abre el ${fechaLarga(a.fecha_inicio)}. Todavía no puedes tomar números.`,
+    },
+    solo_pago: {
+      icono: "hourglass_bottom",
+      clase: "bg-estado-apartado-bg text-estado-apartado-fg",
+      texto: `Ya pasó el cierre de abonos (${fechaLarga(a.fecha_limite_abonos)}): desde ahora solo se venden números con pago completo.`,
+    },
+    cerrando: {
+      icono: "lock_clock",
+      clase: "bg-error-container text-on-error-container",
+      texto: `El sorteo del ${fechaLarga(a.fecha_sorteo)} ya se jugó. No se pueden tomar más números.`,
+    },
+    venta: null,
+  }[a.fase];
+
+  if (!aviso) return null;
+
+  return (
+    <div
+      className={`mb-4 flex items-start gap-2 rounded-xl px-4 py-3 text-body-sm font-semibold ${aviso.clase}`}
+    >
+      <span className="material-symbols-outlined shrink-0 text-[18px]">
+        {aviso.icono}
+      </span>
+      {aviso.texto}
+    </div>
   );
 }
 
@@ -164,6 +209,7 @@ export default function VendedorLayout({ children }: { children: React.ReactNode
         onCuenta={() => setMostrarCuenta(true)}
         onSalir={salir}
       >
+        {alertas && <BannerFase a={alertas} />}
         {children}
       </AppShell>
       {mostrarCuenta && <CambiarClave onCerrar={() => setMostrarCuenta(false)} />}

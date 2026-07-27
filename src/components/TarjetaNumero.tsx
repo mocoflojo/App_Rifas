@@ -2,6 +2,7 @@
 
 import { enlaceWhatsapp } from "@/lib/telefono";
 import { p3RecordatorioCobro, p4RecordatorioApartado } from "@/lib/plantillas";
+import { fechaCorta, fechaLarga } from "@/lib/sorteo";
 
 /** Fila de vendedor_mis_numeros (migración 0011). La comparten "Mis
  *  clientes" y la agenda para que las dos cuenten los plazos igual. */
@@ -26,17 +27,9 @@ export type MiNumero = {
 const etiqueta = (n: number) => String(n).padStart(3, "0");
 const dinero = (n: number) => `$${Number(n).toFixed(2)}`;
 
-/** La fecha pautada es un día del calendario, no un instante. Pasarla por
- *  new Date(iso) la interpreta en UTC y luego la baja a la hora local: un
- *  cobro puesto para hoy terminaba mostrándose como el de ayer. Por eso se
- *  arma desde sus partes. */
-export function fechaCorta(iso: string) {
-  const [anio, mes, dia] = iso.slice(0, 10).split("-").map(Number);
-  return new Date(anio, mes - 1, dia).toLocaleDateString("es-VE", {
-    day: "numeric",
-    month: "short",
-  });
-}
+/** Vive en lib/sorteo junto al resto del manejo de fechas sueltas; se
+ *  reexporta porque las pantallas de vendedor ya la importan desde aquí. */
+export { fechaCorta } from "@/lib/sorteo";
 
 /** Cuán apremiante es el plazo. Manda el color de toda la tarjeta. */
 export function urgencia(n: MiNumero): "vencido" | "urgente" | "normal" | "ninguna" {
@@ -100,31 +93,33 @@ function Chip({ children, clase }: { children: React.ReactNode; clase: string })
 function recordatorio(
   n: MiNumero,
   abonoMinimo: number,
-  diaLimite: number
+  fechaLimite: string | null
 ): string {
   const cliente = n.cliente_nombre ?? "amigo";
+  const corte = fechaLimite ? fechaLarga(fechaLimite) : "la fecha de cierre";
   if (n.estado === "apartado") {
     const limite =
       n.dias_restantes !== null
         ? new Date(
             Date.now() + n.dias_restantes * 86400000
           ).toLocaleDateString("es-VE", { day: "numeric", month: "long" })
-        : `día ${diaLimite}`;
+        : corte;
     return p4RecordatorioApartado(cliente, n.numero, abonoMinimo, limite);
   }
-  return p3RecordatorioCobro(cliente, n.numero, Number(n.falta), diaLimite);
+  return p3RecordatorioCobro(cliente, n.numero, Number(n.falta), corte);
 }
 
 export function TarjetaNumero({
   n,
   abonoMinimo,
-  diaLimite,
+  fechaLimite,
   precioTicket,
   onGestionar,
 }: {
   n: MiNumero;
   abonoMinimo: number;
-  diaLimite: number;
+  /** Fecha de corte de abonos del sorteo en curso (migración 0015). */
+  fechaLimite: string | null;
   precioTicket: number;
   onGestionar: (numero: number) => void;
 }) {
@@ -196,7 +191,7 @@ export function TarjetaNumero({
             <a
               href={enlaceWhatsapp(
                 n.cliente_whatsapp,
-                recordatorio(n, abonoMinimo, diaLimite)
+                recordatorio(n, abonoMinimo, fechaLimite)
               )}
               target="_blank"
               rel="noopener noreferrer"

@@ -8,7 +8,10 @@ import { CATALOGO_LOGROS, ORDEN_LOGROS, type LogroId } from "@/lib/logros";
 type LogroGanado = {
   logro_id: string;
   fecha: string;
-  mes: string;
+  /** Etiqueta del sorteo en que se ganó ("Agosto 2026"), solo para mostrar. */
+  mes: string | null;
+  /** La llave de verdad: los sorteos ya no son meses del calendario. */
+  sorteo: number;
   visto: boolean;
   pagado: boolean;
 };
@@ -41,28 +44,28 @@ function Insignia({
   ganado,
   cupo,
   dias,
-  mesActual,
+  sorteoActual,
   conBonos,
 }: {
   id: LogroId;
   ganado: LogroGanado | null;
   cupo: number;
   dias: number;
-  mesActual: string;
+  sorteoActual: number;
   conBonos: boolean;
 }) {
   const def = CATALOGO_LOGROS[id];
   const bloqueado = !ganado;
   /** Ganado, pero el dinero espera a que el equipo llegue a la meta
-   *  colectiva. Solo aplica al mes en curso: si el mes cerró sin alcanzar
-   *  la meta, ese bono ya no se paga y el chip sería una promesa falsa.
-   *  Sin bonos activos no hay dinero que esperar en ningún caso. */
+   *  colectiva. Solo aplica al sorteo en curso: si un sorteo cerró sin
+   *  alcanzar la meta, ese bono ya no se paga y el chip sería una promesa
+   *  falsa. Sin bonos activos no hay dinero que esperar en ningún caso. */
   const pendienteDeEquipo =
     conBonos &&
     !!ganado &&
     def.requiereMetaColectiva &&
     !ganado.pagado &&
-    ganado.mes === mesActual;
+    ganado.sorteo === sorteoActual;
 
   return (
     <div
@@ -109,7 +112,7 @@ function Insignia({
         )
       ) : def.soloAlCierre ? (
         <span className="rounded-full bg-surface-container-high px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-on-surface-variant">
-          Se otorga al cerrar el mes
+          Se otorga al cerrar el sorteo
         </span>
       ) : (
         <span className="flex items-center gap-1 rounded-full bg-surface-container-high px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-on-surface-variant">
@@ -127,14 +130,14 @@ function Celebracion({
   nuevos,
   cupo,
   dias,
-  mesActual,
+  sorteoActual,
   conBonos,
   onCerrar,
 }: {
   nuevos: LogroGanado[];
   cupo: number;
   dias: number;
-  mesActual: string;
+  sorteoActual: number;
   conBonos: boolean;
   onCerrar: () => void;
 }) {
@@ -152,7 +155,7 @@ function Celebracion({
       >
         <div className="flex gap-1 text-[48px] leading-none">
           {nuevos.map((n) => (
-            <span key={n.logro_id + n.mes}>
+            <span key={n.logro_id + n.sorteo}>
               {CATALOGO_LOGROS[n.logro_id as LogroId]?.emoji}
             </span>
           ))}
@@ -178,7 +181,7 @@ function Celebracion({
               (n) =>
                 CATALOGO_LOGROS[n.logro_id as LogroId]?.requiereMetaColectiva &&
                 !n.pagado &&
-                n.mes === mesActual
+                n.sorteo === sorteoActual
             ) && (
             <p className="mt-1 flex items-center justify-center gap-1.5 text-body-sm font-semibold text-estado-apartado-fg">
               <span className="material-symbols-outlined text-[16px]">
@@ -208,7 +211,7 @@ export default function LogrosPage() {
   const [posicion, setPosicion] = useState<Posicion | null>(null);
   const [colectivo, setColectivo] = useState<Colectivo | null>(null);
   const [racha, setRacha] = useState(0);
-  const [mesActual, setMesActual] = useState("");
+  const [sorteoActual, setSorteoActual] = useState(0);
   const [celebrando, setCelebrando] = useState(false);
 
   useEffect(() => {
@@ -230,7 +233,7 @@ export default function LogrosPage() {
       if (p.data) setPosicion(p.data as Posicion);
       if (typeof ra.data === "number") setRacha(ra.data);
       if (col.data) setColectivo(col.data as Colectivo);
-      if (cfg.data?.mes_actual) setMesActual(cfg.data.mes_actual as string);
+      if (cfg.data?.numero_sorteo) setSorteoActual(cfg.data.numero_sorteo as number);
       if (lista.some((n) => !n.visto)) setCelebrando(true);
     })();
     return () => {
@@ -351,7 +354,7 @@ export default function LogrosPage() {
             }`}
           >
             {racha === 0
-              ? "Completa tu cupo este mes para encenderla."
+              ? "Completa tu cupo en este sorteo para encenderla."
               : racha < 3
                 ? `Van ${racha} de 3 para "En racha".`
                 : "¡Estás que ardes!"}
@@ -387,7 +390,7 @@ export default function LogrosPage() {
             ganado={porId.get(id) ?? null}
             cupo={resumen.cupo}
             dias={resumen.dias_vendedor_rapido}
-            mesActual={mesActual}
+            sorteoActual={sorteoActual}
             conBonos={resumen.bonos_activos}
           />
         ))}
@@ -398,7 +401,7 @@ export default function LogrosPage() {
           nuevos={nuevos}
           cupo={resumen.cupo}
           dias={resumen.dias_vendedor_rapido}
-          mesActual={mesActual}
+          sorteoActual={sorteoActual}
           conBonos={resumen.bonos_activos}
           onCerrar={cerrarCelebracion}
         />

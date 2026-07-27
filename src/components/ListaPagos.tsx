@@ -52,7 +52,7 @@ export function ListaPagos({ pagos }: { pagos: Pago[] }) {
           savings
         </span>
         <p className="text-body-sm text-on-surface-variant">
-          Todavía no hay comisiones pagadas este mes.
+          Todavía no hay comisiones pagadas en este sorteo.
         </p>
       </div>
     );

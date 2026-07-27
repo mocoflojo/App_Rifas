@@ -4,13 +4,21 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { getAdminToken } from "@/lib/session";
+import { FASES, fechaLarga, type Fase } from "@/lib/sorteo";
 
 type Resumen = {
-  mes_actual: string;
+  numero_sorteo: number;
+  etiqueta: string;
+  fase: Fase;
+  fecha_inicio: string | null;
+  fecha_limite_abonos: string | null;
+  fecha_sorteo: string | null;
   tickets_activos: number;
   total_vendido: number;
   numeros_banca: number;
-  dias_para_sorteo: number;
+  /** null cuando no hay ningún sorteo programado. */
+  dias_para_sorteo: number | null;
+  dias_para_corte: number | null;
   vendedores_activos: number;
   comisiones_pagadas: number;
 };
@@ -155,7 +163,7 @@ export default function ResumenAdminPage() {
   if (!datos) {
     return (
       <div className="flex flex-col gap-4">
-        <h1 className="text-display-mobile text-primary">Resumen del mes</h1>
+        <h1 className="text-display-mobile text-primary">Resumen del sorteo</h1>
         <div className="h-44 animate-pulse rounded-xl bg-surface-container" />
         <div className="grid grid-cols-2 gap-3">
           {[0, 1, 2, 3].map((i) => (
@@ -181,12 +189,56 @@ export default function ResumenAdminPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-col gap-1">
-        <span className="text-label-caps uppercase text-secondary">
-          {datos.mes_actual}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-col gap-1">
+          <span className="text-label-caps uppercase text-secondary">
+            Sorteo #{datos.numero_sorteo}
+            {datos.etiqueta ? ` · ${datos.etiqueta}` : ""}
+          </span>
+          <h1 className="text-display-mobile text-primary">Resumen del sorteo</h1>
+        </div>
+        <span
+          className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-body-sm font-semibold ${FASES[datos.fase].clase}`}
+        >
+          <span className="material-symbols-outlined text-[16px]">
+            {FASES[datos.fase].icono}
+          </span>
+          {FASES[datos.fase].texto}
         </span>
-        <h1 className="text-display-mobile text-primary">Resumen del mes</h1>
       </div>
+
+      {/* Sin sorteo programado no hay nada que resumir: el talonario está
+          cerrado y todas las cifras de abajo valen cero. */}
+      {datos.fase === "sin_sorteo" && (
+        <Link
+          href="/admin/sorteo"
+          className="flex items-center gap-3 rounded-xl border-2 border-dashed border-outline-variant bg-surface-container-lowest p-5"
+        >
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary-fixed text-primary">
+            <span className="material-symbols-outlined text-[22px]">add_circle</span>
+          </span>
+          <div className="flex min-w-0 flex-1 flex-col">
+            <span className="text-body-lg font-semibold text-primary">
+              Programa el próximo sorteo
+            </span>
+            <span className="text-body-sm text-on-surface-variant">
+              El talonario está cerrado: nadie puede vender hasta que elijas
+              las fechas.
+            </span>
+          </div>
+          <span className="material-symbols-outlined text-[20px] text-on-surface-variant">
+            chevron_right
+          </span>
+        </Link>
+      )}
+
+      {datos.fase === "programado" && (
+        <div className="flex items-start gap-2 rounded-xl bg-estado-abonado-bg px-4 py-3 text-body-sm text-estado-abonado-fg">
+          <span className="material-symbols-outlined text-[18px]">event_upcoming</span>
+          El talonario abre el {fechaLarga(datos.fecha_inicio)}. Hasta entonces
+          los vendedores no pueden tomar números.
+        </div>
+      )}
 
       {/* Meta colectiva — solo tiene sentido si hay bonos que liberar */}
       {colectivo?.bonos_activos && (
@@ -258,7 +310,7 @@ export default function ResumenAdminPage() {
         <Cifra
           icono="event"
           etiqueta="Días para el sorteo"
-          valor={String(datos.dias_para_sorteo)}
+          valor={datos.dias_para_sorteo === null ? "—" : String(datos.dias_para_sorteo)}
           chip="bg-primary-fixed text-primary"
         />
         <Cifra

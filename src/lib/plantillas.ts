@@ -32,12 +32,14 @@ export function p2AbonoPorVencer(
   cliente: string,
   numero: number,
   monto: number,
-  diaLimite: number
+  /** Ya formateada ("8 de septiembre de 2026"): el corte es una fecha del
+   *  sorteo, no un día fijo del mes. */
+  fechaLimite: string
 ): string {
   return (
     `⚠️ Hola ${vendedor}, el abono de ${cliente} ` +
     `(número #${String(numero).padStart(3, "0")}, $${monto.toFixed(2)} pagados) ` +
-    `vence el día ${diaLimite}. Recuérdale completar el pago para activar su número.`
+    `vence el ${fechaLimite}. Recuérdale completar el pago para activar su número.`
   );
 }
 
@@ -69,12 +71,15 @@ export function p3RecordatorioCobro(
   cliente: string,
   numero: number,
   restante: number,
-  diaLimite: number
+  /** Ya formateada ("8 de septiembre de 2026"). El corte dejó de ser un día
+   *  del mes para ser una fecha del sorteo: al cliente hay que decirle la
+   *  fecha completa o no sabe de qué mes le hablan. */
+  fechaLimite: string
 ): string {
   return (
     `Hola ${cliente} 👋 Te recuerdo tu número #${String(numero).padStart(3, "0")} ` +
     `de la rifa de las 3 motos. Te faltan $${restante.toFixed(2)} para completarlo ` +
-    `y el plazo es hasta el día ${diaLimite}. ¿Cuándo paso a cobrarte? 🏍️`
+    `y el plazo es hasta el ${fechaLimite}. ¿Cuándo paso a cobrarte? 🏍️`
   );
 }
 

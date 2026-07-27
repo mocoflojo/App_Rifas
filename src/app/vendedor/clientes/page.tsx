@@ -78,7 +78,7 @@ export default function ClientesPage() {
           <h1 className="text-display-mobile text-primary">Mis clientes</h1>
           <p className="text-body-sm text-on-surface-variant">
             {numeros.length} {numeros.length === 1 ? "número" : "números"} a tu
-            nombre este mes.
+            nombre en este sorteo.
           </p>
         </div>
 
@@ -135,7 +135,7 @@ export default function ClientesPage() {
                 key={n.numero}
                 n={n}
                 abonoMinimo={Number(config.abono_minimo)}
-                diaLimite={config.dia_limite}
+                fechaLimite={config.fecha_limite_abonos}
                 precioTicket={Number(config.precio_ticket)}
                 onGestionar={setAbierto}
               />

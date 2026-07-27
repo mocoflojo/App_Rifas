@@ -6,6 +6,7 @@ import { getAdminToken } from "@/lib/session";
 import { enlaceWhatsapp } from "@/lib/telefono";
 import { mensajeError } from "@/lib/errores";
 import { p2AbonoPorVencer, p2ApartadoPorVencer } from "@/lib/plantillas";
+import { fechaCorta, fechaLarga } from "@/lib/sorteo";
 
 type Item = {
   tipo: "apartado" | "abonado";
@@ -71,7 +72,7 @@ export default function VencimientosPage() {
   const [error, setError] = useState<string | null>(null);
   const [procesando, setProcesando] = useState<number | null>(null);
   const [recarga, setRecarga] = useState(0);
-  const [diaLimite, setDiaLimite] = useState(25);
+  const [fechaLimite, setFechaLimite] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelado = false;
@@ -82,7 +83,7 @@ export default function VencimientosPage() {
       ]);
       if (cancelado) return;
       if (!v.error && v.data) setItems(v.data as Item[]);
-      if (c.data?.dia_limite_abonos) setDiaLimite(c.data.dia_limite_abonos);
+      if (c.data?.fecha_limite_abonos) setFechaLimite(c.data.fecha_limite_abonos);
     })();
     return () => {
       cancelado = true;
@@ -266,7 +267,7 @@ export default function VencimientosPage() {
           </h2>
           <span className="flex items-center gap-1 text-body-sm text-on-surface-variant">
             <span className="material-symbols-outlined text-[16px]">event</span>
-            Límite: día {diaLimite}
+            Límite: {fechaCorta(fechaLimite)}
           </span>
         </div>
 
@@ -323,7 +324,7 @@ export default function VencimientosPage() {
                       i.cliente_nombre ?? "su cliente",
                       i.numero,
                       pagado,
-                      diaLimite
+                      fechaLarga(fechaLimite)
                     )
                   )}
                   target="_blank"

@@ -6,7 +6,7 @@ const MENSAJES: Record<string, string> = {
   cupo_lleno:
     "Llegaste a tu cupo de números. Libera alguno o pídele más cupo al admin.",
   solo_pago_completo:
-    "Ya pasó el día de cierre: desde hoy solo se aceptan ventas con pago completo.",
+    "Ya pasó la fecha de cierre de abonos: desde ahora solo se aceptan ventas con pago completo.",
   abono_insuficiente: "El abono mínimo es de $5.",
   monto_excede: "Ese monto pasa del precio del ticket.",
   monto_invalido: "Escribe un monto válido.",
@@ -47,6 +47,30 @@ const MENSAJES: Record<string, string> = {
   // Comisiones (migración 0009)
   sin_meta_disponible:
     "Ese vendedor no tiene metas por cobrar ahora mismo. Recarga la pantalla para ver sus datos al día.",
+
+  // Períodos del sorteo (migración 0015)
+  sin_sorteo_activo:
+    "No hay ningún sorteo abierto ahora mismo. El admin tiene que programar el próximo.",
+  sorteo_no_empezado:
+    "El sorteo todavía no arranca. Podrás vender a partir de la fecha de apertura.",
+  sorteo_terminado:
+    "El sorteo ya se jugó: no se pueden tomar más números.",
+  fechas_incompletas: "Faltan fechas: hay que poner las tres.",
+  etiqueta_requerida: "Ponle un nombre al sorteo.",
+  limite_antes_del_inicio:
+    "El cierre de abonos no puede ser antes del arranque del sorteo.",
+  sorteo_antes_del_limite:
+    "El sorteo no puede jugarse antes del cierre de abonos.",
+  inicio_bloqueado:
+    "Ya hay números vendidos: la fecha de arranque no se puede mover, porque decide quién ganó la insignia de vendedor rápido.",
+  limite_no_puede_retroceder:
+    "El cierre de abonos solo puede estirarse. Adelantarlo vencería abonos que hoy están en plazo.",
+  sorteo_no_puede_retroceder:
+    "La fecha del sorteo solo puede estirarse, nunca adelantarse.",
+  sorteo_con_ventas:
+    "Este sorteo ya tiene números vendidos: no se puede cancelar sin decidir cómo se devuelve cada abono.",
+  sorteo_no_registrado:
+    "Registra los tres números ganadores antes de cerrar el sorteo.",
 };
 
 export function mensajeError(error: { message?: string } | null): string {

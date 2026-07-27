@@ -3,9 +3,16 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { getAdminToken } from "@/lib/session";
+import { fechaCorta } from "@/lib/sorteo";
 
-type Mes = {
-  mes: string;
+type SorteoCerrado = {
+  /** Llave real desde la migración 0015: los sorteos dejaron de ser meses. */
+  sorteo: number;
+  etiqueta: string | null;
+  /** Etiqueta vieja de los meses cerrados antes de la 0015. */
+  mes: string | null;
+  fecha_inicio: string | null;
+  fecha_sorteo: string | null;
   tickets_vendidos: number;
   ingresos: number;
   comisiones_pagadas: number;
@@ -19,23 +26,18 @@ type Mes = {
 
 const dinero = (n: number) => `$${Number(n).toFixed(2)}`;
 
-function nombreMes(mes: string) {
-  const [anio, m] = mes.split("-").map(Number);
-  return new Date(anio, m - 1, 1).toLocaleDateString("es-VE", {
-    month: "long",
-    year: "numeric",
-  });
-}
+const titulo = (s: SorteoCerrado) =>
+  s.etiqueta || s.mes || `Sorteo #${s.sorteo}`;
 
 export default function HistorialPage() {
-  const [meses, setMeses] = useState<Mes[] | null>(null);
+  const [meses, setMeses] = useState<SorteoCerrado[] | null>(null);
 
   useEffect(() => {
     (async () => {
       const { data } = await supabase.rpc("admin_historico", {
         p_admin_token: getAdminToken(),
       });
-      setMeses((data as Mes[]) ?? []);
+      setMeses((data as SorteoCerrado[]) ?? []);
     })();
   }, []);
 
@@ -57,7 +59,7 @@ export default function HistorialPage() {
             history
           </span>
           <p className="text-body-sm text-on-surface-variant">
-            Todavía no se ha cerrado ningún mes.
+            Todavía no se ha cerrado ningún sorteo.
           </p>
         </div>
       </div>
@@ -74,19 +76,26 @@ export default function HistorialPage() {
         const top = "nombre" in m.top_vendedor ? m.top_vendedor : null;
         return (
           <article
-            key={m.mes}
+            key={m.sorteo}
             className="flex flex-col gap-4 rounded-xl bg-surface-container-lowest p-5 shadow-[0_10px_25px_rgba(26,82,118,0.05)]"
           >
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-headline capitalize text-primary">
-                {nombreMes(m.mes)}
-              </h2>
-              {m.mes === mejorMes.mes && meses.length > 1 && (
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex min-w-0 flex-col">
+                <h2 className="text-headline capitalize text-primary">
+                  {titulo(m)}
+                </h2>
+                {m.fecha_inicio && m.fecha_sorteo && (
+                  <span className="text-body-sm text-on-surface-variant">
+                    {fechaCorta(m.fecha_inicio)} — {fechaCorta(m.fecha_sorteo)}
+                  </span>
+                )}
+              </div>
+              {m.sorteo === mejorMes.sorteo && meses.length > 1 && (
                 <span className="flex items-center gap-1 rounded-full bg-estado-libre-bg px-2.5 py-1 text-[10px] font-bold uppercase text-estado-activo-bg">
                   <span className="material-symbols-outlined text-[14px]">
                     trending_up
                   </span>
-                  Mejor mes
+                  El mejor
                 </span>
               )}
             </div>

@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { getAdminToken } from "@/lib/session";
 import { mensajeError } from "@/lib/errores";
+import { FASES, fechaLarga, type Fase } from "@/lib/sorteo";
 
 type Premio = { nombre: string; valor: number };
 
@@ -13,7 +15,6 @@ type ConfigForm = {
   meta_tickets: number;
   pago_meta: number;
   abono_minimo: number;
-  dia_limite_abonos: number;
   dias_limite_apartado: number;
   cupo_default: number;
   codigo_invitacion: string;
@@ -30,8 +31,16 @@ type ConfigForm = {
 };
 
 type ConfigCompleta = ConfigForm & {
-  mes_actual: string;
-  /** Con el mes ya en marcha, el interruptor de bonos no se puede tocar. */
+  numero_sorteo: number;
+  etiqueta: string;
+  fase: Fase;
+  /** Las tres fechas del sorteo se editan en la pantalla Sorteo, no aquí:
+   *  cambiarlas tiene reglas propias (el arranque se congela con la primera
+   *  venta) y mezclarlas con los parámetros invitaría a tocarlas sin querer. */
+  fecha_inicio: string | null;
+  fecha_limite_abonos: string | null;
+  fecha_sorteo: string | null;
+  /** Con el sorteo ya en marcha, el interruptor de bonos no se puede tocar. */
   mes_iniciado: boolean;
 };
 
@@ -54,6 +63,19 @@ function Campo({
       />
       {ayuda && <span className="text-body-sm text-on-surface-variant">{ayuda}</span>}
     </label>
+  );
+}
+
+function FechaLeida({ etiqueta, valor }: { etiqueta: string; valor: string | null }) {
+  return (
+    <div className="flex flex-col gap-1 rounded-lg bg-surface-container-low p-3">
+      <span className="text-[10px] font-bold uppercase text-on-surface-variant">
+        {etiqueta}
+      </span>
+      <span className="text-body-sm font-bold text-on-surface">
+        {fechaLarga(valor)}
+      </span>
+    </div>
   );
 }
 
@@ -163,7 +185,6 @@ export default function ConfigPage() {
       p_meta_tickets: form.meta_tickets,
       p_pago_meta: form.pago_meta,
       p_abono_minimo: form.abono_minimo,
-      p_dia_limite_abonos: form.dia_limite_abonos,
       p_dias_limite_apartado: form.dias_limite_apartado,
       p_cupo_default: form.cupo_default,
       p_codigo_invitacion: form.codigo_invitacion,
@@ -219,31 +240,70 @@ export default function ConfigPage() {
 
   const huboCambioRetroactivo =
     form.precio_ticket !== datos.precio_ticket ||
-    form.dia_limite_abonos !== datos.dia_limite_abonos ||
     form.meta_tickets !== datos.meta_tickets;
+
+  const fase = FASES[datos.fase];
 
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-1">
         <span className="text-label-caps uppercase text-secondary">
-          {datos.mes_actual}
+          {datos.etiqueta || "Sin sorteo activo"}
         </span>
         <h1 className="text-display-mobile text-primary">Configuración</h1>
       </div>
 
+      {/* Las fechas viven en la pantalla Sorteo; aquí solo se muestran para
+          no obligar al admin a ir y volver para recordarlas. */}
+      <section className="flex flex-col gap-3 rounded-xl bg-surface-container-lowest p-5 shadow-[0_10px_25px_rgba(26,82,118,0.05)]">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className="flex size-9 items-center justify-center rounded-lg bg-primary-fixed text-primary">
+              <span className="material-symbols-outlined text-[18px]">calendar_month</span>
+            </span>
+            <h2 className="text-headline text-primary">Fechas del sorteo</h2>
+          </div>
+          <span
+            className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-body-sm font-semibold ${fase.clase}`}
+          >
+            <span className="material-symbols-outlined text-[16px]">{fase.icono}</span>
+            {fase.texto}
+          </span>
+        </div>
+
+        {datos.fase === "sin_sorteo" ? (
+          <p className="text-body-sm text-on-surface-variant">
+            No hay ningún sorteo programado. El talonario está cerrado hasta
+            que crees el próximo.
+          </p>
+        ) : (
+          <div className="grid grid-cols-3 gap-2">
+            <FechaLeida etiqueta="Arranca" valor={datos.fecha_inicio} />
+            <FechaLeida etiqueta="Cierre de abonos" valor={datos.fecha_limite_abonos} />
+            <FechaLeida etiqueta="Se juega" valor={datos.fecha_sorteo} />
+          </div>
+        )}
+
+        <Link
+          href="/admin/sorteo"
+          className="flex h-11 items-center justify-center gap-2 rounded-lg border-2 border-outline-variant text-body-sm font-semibold text-on-surface-variant"
+        >
+          <span className="material-symbols-outlined text-[18px]">edit_calendar</span>
+          {datos.fase === "sin_sorteo" ? "Programar un sorteo" : "Cambiar las fechas"}
+        </Link>
+      </section>
+
       {huboCambioRetroactivo && (
         <div className="flex items-start gap-2 rounded-lg bg-estado-apartado-bg px-4 py-3 text-body-sm text-estado-apartado-fg">
           <span className="material-symbols-outlined text-[18px]">warning</span>
-          Cambiar el precio, la meta de comisión o el día límite de abonos
-          afecta de inmediato a las ventas que ya están en curso este mes,
-          no solo a las nuevas.
+          Cambiar el precio o la meta de comisión afecta de inmediato a las
+          ventas que ya están en curso, no solo a las nuevas.
         </div>
       )}
 
       <Seccion icono="storefront" titulo="Parámetros de la rifa">
         <Campo etiqueta="Precio del ticket ($)" type="number" step="0.01" {...num("precio_ticket")} />
         <Campo etiqueta="Abono mínimo ($)" type="number" step="0.01" {...num("abono_minimo")} />
-        <Campo etiqueta="Día límite de abonos" type="number" min={1} max={28} {...num("dia_limite_abonos")} />
         <Campo etiqueta="Días de plazo del apartado" type="number" min={1} {...num("dias_limite_apartado")} />
         <Campo etiqueta="Cupo por vendedor (nuevos)" type="number" min={1} {...num("cupo_default")} />
         <Campo etiqueta="Código de invitación" {...texto("codigo_invitacion")} />
@@ -300,8 +360,8 @@ export default function ConfigPage() {
         {datos.mes_iniciado && (
           <div className="flex items-start gap-2 rounded-lg bg-surface-container px-4 py-3 text-body-sm text-on-surface-variant">
             <span className="material-symbols-outlined text-[18px]">lock</span>
-            El mes ya arrancó, así que esta decisión queda congelada hasta el
-            próximo cierre. Cambiarla ahora dejaría a unos vendedores
+            El sorteo ya arrancó, así que esta decisión queda congelada hasta
+            el próximo cierre. Cambiarla ahora dejaría a unos vendedores
             cobrando y a otros no por el mismo logro.
           </div>
         )}
@@ -315,16 +375,23 @@ export default function ConfigPage() {
             descripcion="El dinero de estos tres bonos no se paga hasta que TODO el equipo junte la meta colectiva."
           >
             <Campo etiqueta="Meta colectiva (tickets)" type="number" min={1} {...num("meta_colectiva")} />
-            <Campo etiqueta="Vendedor rápido: antes del día" type="number" min={1} max={28} {...num("dias_vendedor_rapido")} />
+            <Campo
+              etiqueta="Vendedor rápido: primeros N días"
+              ayuda="Contados desde que arranca el sorteo, no desde el día 1 del mes."
+              type="number"
+              min={1}
+              max={90}
+              {...num("dias_vendedor_rapido")}
+            />
             <Campo etiqueta="Bono vendedor rápido ($)" type="number" step="0.01" {...num("premio_vendedor_rapido")} />
             <Campo etiqueta="Bono cupo completo ($)" type="number" step="0.01" {...num("premio_cupo_completo")} />
-            <Campo etiqueta="Bono en racha (3 meses) ($)" type="number" step="0.01" {...num("premio_racha")} />
+            <Campo etiqueta="Bono en racha (3 sorteos) ($)" type="number" step="0.01" {...num("premio_racha")} />
           </Seccion>
 
           <Seccion
             icono="military_tech"
-            titulo="Top vendedor del mes"
-            descripcion="Se paga al cerrar el mes, sin depender de la meta colectiva."
+            titulo="Top vendedor del sorteo"
+            descripcion="Se paga al cerrar el sorteo, sin depender de la meta colectiva."
           >
             <Campo etiqueta="Premio 1er lugar ($)" type="number" step="0.01" {...num("premio_top_1")} />
             <Campo etiqueta="Premio 2do lugar ($)" type="number" step="0.01" {...num("premio_top_2")} />

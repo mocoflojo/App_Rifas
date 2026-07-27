@@ -6,6 +6,7 @@ import { getVendedorToken } from "@/lib/session";
 import { RegistroNumero } from "@/components/RegistroNumero";
 import { TarjetaNumero, type MiNumero } from "@/components/TarjetaNumero";
 import type { AlertasVendedor } from "@/lib/alertas";
+import { fechaLarga } from "@/lib/sorteo";
 
 /** Fecha de hoy en formato yyyy-mm-dd según el reloj del teléfono.
  *  en-CA es el atajo estándar para conseguir ese formato sin armarlo a mano. */
@@ -58,7 +59,7 @@ function Seccion({
           key={n.numero}
           n={n}
           abonoMinimo={Number(config.abono_minimo)}
-          diaLimite={config.dia_limite}
+          fechaLimite={config.fecha_limite_abonos}
           precioTicket={Number(config.precio_ticket)}
           onGestionar={onGestionar}
         />
@@ -147,7 +148,7 @@ export default function AgendaPage() {
   const totalAlertas =
     paraHoy.length + apartadosPorVencer.length + abonosPorCerrar.length;
 
-  const fechaLarga = new Date().toLocaleDateString("es-VE", {
+  const hoyLargo = new Date().toLocaleDateString("es-VE", {
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -158,7 +159,7 @@ export default function AgendaPage() {
       <div className="flex flex-col gap-5">
         <div className="flex flex-col gap-1">
           <span className="text-label-caps uppercase text-secondary">
-            {fechaLarga}
+            {hoyLargo}
           </span>
           <h1 className="text-display-mobile text-primary">Agenda de cobros</h1>
         </div>
@@ -211,8 +212,8 @@ export default function AgendaPage() {
             {config.dias_para_corte >= 0
               ? `Quedan ${config.dias_para_corte} ${
                   config.dias_para_corte === 1 ? "día" : "días"
-                } para el cierre de abonos (día ${config.dia_limite}).`
-              : `Ya pasó el día ${config.dia_limite}: desde ahora solo se aceptan ventas con pago completo.`}
+                } para el cierre de abonos (${fechaLarga(config.fecha_limite_abonos)}).`
+              : `Ya pasó el ${fechaLarga(config.fecha_limite_abonos)}: desde ahora solo se aceptan ventas con pago completo.`}
           </span>
         </section>
 
@@ -237,7 +238,7 @@ export default function AgendaPage() {
         <Seccion
           icono="savings"
           titulo="Abonos por cerrar"
-          descripcion={`Deben completar los pagos antes del día ${config.dia_limite} o pierden el dinero.`}
+          descripcion={`Deben completar los pagos antes del ${fechaLarga(config.fecha_limite_abonos)} o pierden el dinero.`}
           tono="aviso"
           numeros={abonosPorCerrar}
           config={config}
