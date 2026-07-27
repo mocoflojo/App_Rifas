@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppShell, type NavItem } from "@/components/AppShell";
-import { limpiarSesion, getDeviceToken } from "@/lib/session";
+import { limpiarSesion, getVendedorToken } from "@/lib/session";
 import { supabase } from "@/lib/supabase";
 
 const items: NavItem[] = [
@@ -62,10 +62,16 @@ export default function VendedorLayout({ children }: { children: React.ReactNode
   useEffect(() => {
     let cancelado = false;
     async function verificar() {
-      const { data, error } = await supabase.rpc("vendedor_por_device", {
-        p_device_token: getDeviceToken(),
+      const token = getVendedorToken();
+      if (!token) {
+        if (!cancelado) setEstado("no_registrado");
+        return;
+      }
+      const { data, error } = await supabase.rpc("vendedor_por_sesion", {
+        p_token: token,
       });
       if (cancelado) return;
+      // Sin fila: el token expiró, se cerró la sesión o el admin la revocó.
       if (error || !data) {
         setEstado("no_registrado");
         return;
@@ -80,6 +86,8 @@ export default function VendedorLayout({ children }: { children: React.ReactNode
   }, []);
 
   function salir() {
+    const token = getVendedorToken();
+    if (token) supabase.rpc("cerrar_sesion_vendedor", { p_token: token });
     limpiarSesion();
     router.replace("/");
   }

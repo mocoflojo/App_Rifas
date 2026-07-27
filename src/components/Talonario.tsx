@@ -2,7 +2,7 @@
 
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { getAdminToken, getDeviceToken, getVendedorId } from "@/lib/session";
+import { getAdminToken, getVendedorToken, getVendedorId } from "@/lib/session";
 
 export type EstadoNumero = "libre" | "apartado" | "abonado" | "activo";
 
@@ -213,7 +213,7 @@ export function Talonario({ modo, onAbrir, recarga = 0 }: Props) {
               p_numero: numero,
             })
           : await supabase.rpc("vendedor_numero_detalle", {
-              p_device_token: getDeviceToken(),
+              p_token: getVendedorToken(),
               p_numero: numero,
             });
       setCargandoDetalle(false);

@@ -17,6 +17,18 @@ const MENSAJES: Record<string, string> = {
   estado_invalido:
     "El número cambió de estado mientras lo tenías abierto. Vuelve a abrirlo.",
   no_autorizado: "Tu sesión no está activa. Vuelve a entrar.",
+
+  // Acceso (migración 0006)
+  credenciales_invalidas: "Usuario o clave incorrectos.",
+  demasiados_intentos:
+    "Demasiados intentos fallidos. Espera 15 minutos o pídele al admin que te restablezca la clave.",
+  codigo_invalido: "Código de invitación incorrecto.",
+  usuario_ocupado: "Ese usuario ya está tomado. Elige otro.",
+  usuario_corto: "El usuario debe tener al menos 3 caracteres.",
+  usuario_invalido: "El usuario solo admite letras, números, punto, guion y guion bajo.",
+  clave_corta: "La clave debe tener al menos 6 caracteres.",
+  nombre_requerido: "Escribe tu nombre completo.",
+  vendedor_no_existe: "Ese vendedor ya no existe.",
 };
 
 export function mensajeError(error: { message?: string } | null): string {

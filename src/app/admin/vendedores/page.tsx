@@ -9,6 +9,7 @@ type Estado = "pendiente" | "activo" | "suspendido";
 type Vendedor = {
   id: string;
   nombre: string;
+  usuario: string | null;
   whatsapp: string;
   estado: Estado;
   cupo: number;
@@ -21,6 +22,17 @@ type Vendedor = {
 type Filtro = "todos" | "activo" | "suspendido";
 
 const META_TICKETS = 10;
+
+/** Clave temporal legible: fácil de dictar por WhatsApp, sin caracteres ambiguos. */
+function claveTemporal() {
+  const letras = "abcdefghjkmnpqrstuvwxyz";
+  const numeros = "23456789";
+  const azar = (s: string) => s[Math.floor(Math.random() * s.length)];
+  return (
+    Array.from({ length: 4 }, () => azar(letras)).join("") +
+    Array.from({ length: 3 }, () => azar(numeros)).join("")
+  );
+}
 
 function iniciales(nombre: string) {
   return nombre
@@ -50,6 +62,13 @@ export default function VendedoresPage() {
   const [vendedores, setVendedores] = useState<Vendedor[] | null>(null);
   const [actualizando, setActualizando] = useState<string | null>(null);
   const [filtro, setFiltro] = useState<Filtro>("todos");
+  /** Clave recién generada, para que el admin pueda enviarla por WhatsApp. */
+  const [reseteo, setReseteo] = useState<{
+    nombre: string;
+    usuario: string;
+    whatsapp: string;
+    clave: string;
+  } | null>(null);
 
   /* Se incrementa para volver a pedir la lista tras un cambio de estado. */
   const [recarga, setRecarga] = useState(0);
@@ -77,6 +96,24 @@ export default function VendedoresPage() {
     });
     setActualizando(null);
     setRecarga((n) => n + 1);
+  }
+
+  async function restablecerClave(v: Vendedor) {
+    setActualizando(v.id);
+    const clave = claveTemporal();
+    const { data, error } = await supabase.rpc("admin_resetear_clave_vendedor", {
+      p_admin_token: getAdminToken(),
+      p_vendedor_id: v.id,
+      p_clave_nueva: clave,
+    });
+    setActualizando(null);
+    if (error || !data) return;
+    setReseteo({
+      nombre: data.nombre,
+      usuario: data.usuario ?? "",
+      whatsapp: data.whatsapp ?? "",
+      clave,
+    });
   }
 
   if (vendedores === null) {
@@ -260,27 +297,112 @@ export default function VendedoresPage() {
                     ${Number(v.comision_pagada).toFixed(2)}
                   </span>
                 </div>
-                <button
-                  disabled={actualizando === v.id}
-                  onClick={() =>
-                    cambiarEstado(v.id, suspendido ? "activo" : "suspendido")
-                  }
-                  className={`flex h-11 items-center gap-2 rounded-lg px-4 text-body-sm font-semibold transition-transform active:scale-[0.98] disabled:opacity-60 ${
-                    suspendido
-                      ? "bg-secondary text-on-secondary"
-                      : "border-2 border-outline-variant text-on-surface-variant"
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-[18px]">
-                    {suspendido ? "restart_alt" : "block"}
-                  </span>
-                  {suspendido ? "Reactivar" : "Suspender"}
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    disabled={actualizando === v.id}
+                    onClick={() => restablecerClave(v)}
+                    title="Restablecer clave"
+                    aria-label={`Restablecer la clave de ${v.nombre}`}
+                    className="flex size-11 items-center justify-center rounded-lg border-2 border-outline-variant text-on-surface-variant transition-transform active:scale-[0.98] disabled:opacity-60"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">
+                      lock_reset
+                    </span>
+                  </button>
+                  <button
+                    disabled={actualizando === v.id}
+                    onClick={() =>
+                      cambiarEstado(v.id, suspendido ? "activo" : "suspendido")
+                    }
+                    className={`flex h-11 items-center gap-2 rounded-lg px-4 text-body-sm font-semibold transition-transform active:scale-[0.98] disabled:opacity-60 ${
+                      suspendido
+                        ? "bg-secondary text-on-secondary"
+                        : "border-2 border-outline-variant text-on-surface-variant"
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[18px]">
+                      {suspendido ? "restart_alt" : "block"}
+                    </span>
+                    {suspendido ? "Reactivar" : "Suspender"}
+                  </button>
+                </div>
               </div>
             </div>
           );
         })}
       </section>
+
+      {reseteo && (
+        <ClaveRestablecida datos={reseteo} onCerrar={() => setReseteo(null)} />
+      )}
+    </div>
+  );
+}
+
+/** La clave solo se ve aquí: en la base queda hasheada y no se puede recuperar. */
+function ClaveRestablecida({
+  datos,
+  onCerrar,
+}: {
+  datos: { nombre: string; usuario: string; whatsapp: string; clave: string };
+  onCerrar: () => void;
+}) {
+  const mensaje = `Hola ${datos.nombre}, tu acceso a la app de rifas quedó restablecido.\n\nUsuario: ${datos.usuario}\nClave: ${datos.clave}\n\nNo la compartas con nadie.`;
+  const enlace = `https://wa.me/${datos.whatsapp.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(mensaje)}`;
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+      <button
+        aria-label="Cerrar"
+        onClick={onCerrar}
+        className="absolute inset-0 bg-black/40"
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        className="relative flex w-full max-w-sm flex-col gap-4 rounded-xl bg-surface-container-lowest p-6 shadow-2xl"
+      >
+        <div className="flex flex-col gap-1">
+          <h2 className="text-headline text-primary">Clave restablecida</h2>
+          <p className="text-body-sm text-on-surface-variant">
+            Se cerraron las sesiones abiertas de {datos.nombre}.
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-2 rounded-lg bg-surface-container p-4">
+          <div className="flex justify-between text-body-sm">
+            <span className="text-on-surface-variant">Usuario</span>
+            <span className="font-semibold text-on-surface">{datos.usuario}</span>
+          </div>
+          <div className="flex justify-between text-body-sm">
+            <span className="text-on-surface-variant">Clave nueva</span>
+            <span className="font-mono text-body-lg font-bold text-primary">
+              {datos.clave}
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-start gap-2 rounded-lg bg-estado-apartado-bg px-4 py-3 text-body-sm text-estado-apartado-fg">
+          <span className="material-symbols-outlined text-[18px]">warning</span>
+          Anótala o envíala ahora: al cerrar esta ventana no se puede volver a ver.
+        </div>
+
+        <a
+          href={enlace}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex h-14 items-center justify-center gap-2 rounded-lg bg-secondary text-body-lg font-semibold text-on-secondary shadow-lg transition-transform active:scale-[0.98]"
+        >
+          <span className="material-symbols-outlined text-[20px]">chat</span>
+          Enviar por WhatsApp
+        </a>
+        <button
+          onClick={onCerrar}
+          className="h-12 rounded-lg border-2 border-outline-variant text-body-sm font-semibold text-on-surface-variant"
+        >
+          Cerrar
+        </button>
+      </div>
     </div>
   );
 }

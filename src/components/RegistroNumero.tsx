@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { getDeviceToken } from "@/lib/session";
+import { getVendedorToken } from "@/lib/session";
 import { mensajeError } from "@/lib/errores";
 
 type Accion = "apartar" | "abonar" | "pagado";
@@ -163,14 +163,14 @@ export function RegistroNumero({ numero, onCerrar, onListo }: Props) {
   useEffect(() => {
     let cancelado = false;
     (async () => {
-      const token = getDeviceToken();
+      const token = getVendedorToken();
       const [d, c, q] = await Promise.all([
         supabase.rpc("vendedor_numero_detalle", {
-          p_device_token: token,
+          p_token: token,
           p_numero: numero,
         }),
         supabase.rpc("config_publica"),
-        supabase.rpc("vendedor_resumen_cupo", { p_device_token: token }),
+        supabase.rpc("vendedor_resumen_cupo", { p_token: token }),
       ]);
       if (cancelado) return;
       setDetalle(Array.isArray(d.data) ? (d.data[0] ?? null) : null);
@@ -374,7 +374,7 @@ export function RegistroNumero({ numero, onCerrar, onListo }: Props) {
                 ejecutar(
                   () =>
                     supabase.rpc("vendedor_tomar_numero", {
-                      p_device_token: getDeviceToken(),
+                      p_token: getVendedorToken(),
                       p_numero: numero,
                       p_cliente_nombre: nombre,
                       p_cliente_whatsapp: whatsapp,
@@ -472,7 +472,7 @@ export function RegistroNumero({ numero, onCerrar, onListo }: Props) {
                   ejecutar(
                     () =>
                       supabase.rpc("vendedor_abonar", {
-                        p_device_token: getDeviceToken(),
+                        p_token: getVendedorToken(),
                         p_numero: numero,
                         p_monto: montoNum,
                       }),
@@ -494,7 +494,7 @@ export function RegistroNumero({ numero, onCerrar, onListo }: Props) {
                   ejecutar(
                     () =>
                       supabase.rpc("vendedor_marcar_pagado", {
-                        p_device_token: getDeviceToken(),
+                        p_token: getVendedorToken(),
                         p_numero: numero,
                       }),
                     `${etiqueta} enviado al admin para confirmar.`
@@ -514,7 +514,7 @@ export function RegistroNumero({ numero, onCerrar, onListo }: Props) {
                       ejecutar(
                         () =>
                           supabase.rpc("vendedor_extender_apartado", {
-                            p_device_token: getDeviceToken(),
+                            p_token: getVendedorToken(),
                             p_numero: numero,
                           }),
                         `Plazo del ${etiqueta} extendido.`
@@ -531,7 +531,7 @@ export function RegistroNumero({ numero, onCerrar, onListo }: Props) {
                       ejecutar(
                         () =>
                           supabase.rpc("vendedor_liberar_numero", {
-                            p_device_token: getDeviceToken(),
+                            p_token: getVendedorToken(),
                             p_numero: numero,
                           }),
                         `${etiqueta} liberado.`
