@@ -7,7 +7,12 @@ import { getVendedorToken } from "@/lib/session";
 import { ListaPagos, type Pago } from "@/components/ListaPagos";
 import type { AlertasVendedor } from "@/lib/alertas";
 
-type Colectivo = { activos: number; meta: number; alcanzada: boolean };
+type Colectivo = {
+  activos: number;
+  meta: number;
+  alcanzada: boolean;
+  bonos_activos: boolean;
+};
 
 type Resumen = {
   nombre: string;
@@ -248,8 +253,8 @@ export default function ResumenVendedorPage() {
         />
       </div>
 
-      {/* Meta colectiva del equipo */}
-      {colectivo && (
+      {/* Meta colectiva — solo tiene sentido si hay bonos que liberar */}
+      {colectivo?.bonos_activos && (
         <Link
           href="/vendedor/logros"
           className={`flex flex-col gap-2 rounded-xl p-4 transition-transform active:scale-[0.99] ${

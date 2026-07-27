@@ -22,7 +22,12 @@ type Alertas = {
   solicitudes: number;
 };
 
-type Colectivo = { activos: number; meta: number; alcanzada: boolean };
+type Colectivo = {
+  activos: number;
+  meta: number;
+  alcanzada: boolean;
+  bonos_activos: boolean;
+};
 
 const dinero = (n: number) => `$${Number(n).toFixed(2)}`;
 
@@ -183,8 +188,8 @@ export default function ResumenAdminPage() {
         <h1 className="text-display-mobile text-primary">Resumen del mes</h1>
       </div>
 
-      {/* Meta colectiva — tarjeta principal, como la meta del vendedor */}
-      {colectivo && (
+      {/* Meta colectiva — solo tiene sentido si hay bonos que liberar */}
+      {colectivo?.bonos_activos && (
         <section
           className={`relative flex flex-col gap-3 overflow-hidden rounded-xl p-6 shadow-xl ${
             colectivo.alcanzada

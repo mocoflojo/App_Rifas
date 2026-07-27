@@ -17,10 +17,16 @@ type Resumen = {
   cupo: number;
   meta_tickets: number;
   dias_vendedor_rapido: number;
+  bonos_activos: boolean;
 };
 
 type Posicion = { posicion: number; total: number; tickets_activos: number };
-type Colectivo = { activos: number; meta: number; alcanzada: boolean };
+type Colectivo = {
+  activos: number;
+  meta: number;
+  alcanzada: boolean;
+  bonos_activos: boolean;
+};
 
 function fechaCorta(iso: string) {
   return new Date(iso).toLocaleDateString("es-VE", {
@@ -36,19 +42,23 @@ function Insignia({
   cupo,
   dias,
   mesActual,
+  conBonos,
 }: {
   id: LogroId;
   ganado: LogroGanado | null;
   cupo: number;
   dias: number;
   mesActual: string;
+  conBonos: boolean;
 }) {
   const def = CATALOGO_LOGROS[id];
   const bloqueado = !ganado;
   /** Ganado, pero el dinero espera a que el equipo llegue a la meta
    *  colectiva. Solo aplica al mes en curso: si el mes cerró sin alcanzar
-   *  la meta, ese bono ya no se paga y el chip sería una promesa falsa. */
+   *  la meta, ese bono ya no se paga y el chip sería una promesa falsa.
+   *  Sin bonos activos no hay dinero que esperar en ningún caso. */
   const pendienteDeEquipo =
+    conBonos &&
     !!ganado &&
     def.requiereMetaColectiva &&
     !ganado.pagado &&
@@ -118,12 +128,14 @@ function Celebracion({
   cupo,
   dias,
   mesActual,
+  conBonos,
   onCerrar,
 }: {
   nuevos: LogroGanado[];
   cupo: number;
   dias: number;
   mesActual: string;
+  conBonos: boolean;
   onCerrar: () => void;
 }) {
   return (
@@ -161,12 +173,13 @@ function Celebracion({
               )
               .join(" ")}
           </p>
-          {nuevos.some(
-            (n) =>
-              CATALOGO_LOGROS[n.logro_id as LogroId]?.requiereMetaColectiva &&
-              !n.pagado &&
-              n.mes === mesActual
-          ) && (
+          {conBonos &&
+            nuevos.some(
+              (n) =>
+                CATALOGO_LOGROS[n.logro_id as LogroId]?.requiereMetaColectiva &&
+                !n.pagado &&
+                n.mes === mesActual
+            ) && (
             <p className="mt-1 flex items-center justify-center gap-1.5 text-body-sm font-semibold text-estado-apartado-fg">
               <span className="material-symbols-outlined text-[16px]">
                 groups
@@ -258,8 +271,8 @@ export default function LogrosPage() {
     <div className="flex flex-col gap-5">
       <h1 className="text-display-mobile text-primary">Mis logros</h1>
 
-      {/* Meta colectiva del equipo */}
-      {colectivo && (
+      {/* Meta colectiva — solo tiene sentido si hay bonos que liberar */}
+      {colectivo?.bonos_activos && (
         <section
           className={`relative flex flex-col gap-3 overflow-hidden rounded-xl p-6 shadow-xl ${
             colectivo.alcanzada
@@ -375,6 +388,7 @@ export default function LogrosPage() {
             cupo={resumen.cupo}
             dias={resumen.dias_vendedor_rapido}
             mesActual={mesActual}
+            conBonos={resumen.bonos_activos}
           />
         ))}
       </div>
@@ -385,6 +399,7 @@ export default function LogrosPage() {
           cupo={resumen.cupo}
           dias={resumen.dias_vendedor_rapido}
           mesActual={mesActual}
+          conBonos={resumen.bonos_activos}
           onCerrar={cerrarCelebracion}
         />
       )}

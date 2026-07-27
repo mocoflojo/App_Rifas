@@ -6,7 +6,7 @@
 export type Pago = {
   id: string;
   monto: number;
-  tipo: "meta" | "liquidacion" | "abonoPerdido";
+  tipo: "meta" | "liquidacion" | "abonoPerdido" | "logro";
   fecha: string;
   detalle: string | null;
 };
@@ -25,6 +25,12 @@ const TIPOS: Record<Pago["tipo"], { etiqueta: string; icono: string; color: stri
   abonoPerdido: {
     etiqueta: "Abono perdido",
     icono: "call_split",
+    color: "bg-estado-apartado-bg text-estado-apartado-fg",
+  },
+  // Bono por logro: medalla y ámbar, para no confundirlo con una meta de $60.
+  logro: {
+    etiqueta: "Bono por logro",
+    icono: "military_tech",
     color: "bg-estado-apartado-bg text-estado-apartado-fg",
   },
 };

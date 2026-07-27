@@ -40,6 +40,10 @@ const MENSAJES: Record<string, string> = {
   // Confirmación (migración 0008)
   nota_requerida: "Escribe el motivo del rechazo: el vendedor lo va a leer.",
 
+  // Bonos opcionales (migración 0014)
+  bonos_bloqueados:
+    "El mes ya arrancó: si pagas o no dinero por logros solo se decide antes de la primera venta. Podrás cambiarlo al cerrar el mes.",
+
   // Comisiones (migración 0009)
   sin_meta_disponible:
     "Ese vendedor no tiene metas por cobrar ahora mismo. Recarga la pantalla para ver sus datos al día.",

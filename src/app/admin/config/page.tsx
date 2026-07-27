@@ -26,9 +26,14 @@ type ConfigForm = {
   premio_top_1: number;
   premio_top_2: number;
   premio_top_3: number;
+  bonos_activos: boolean;
 };
 
-type ConfigCompleta = ConfigForm & { mes_actual: string };
+type ConfigCompleta = ConfigForm & {
+  mes_actual: string;
+  /** Con el mes ya en marcha, el interruptor de bonos no se puede tocar. */
+  mes_iniciado: boolean;
+};
 
 function Campo({
   etiqueta,
@@ -171,6 +176,7 @@ export default function ConfigPage() {
       p_premio_top_1: form.premio_top_1,
       p_premio_top_2: form.premio_top_2,
       p_premio_top_3: form.premio_top_3,
+      p_bonos_activos: form.bonos_activos,
     });
     setGuardando(false);
     if (e) {
@@ -253,27 +259,79 @@ export default function ConfigPage() {
         <Campo etiqueta="Comisión por ticket suelto ($)" type="number" step="0.01" {...num("comision_ticket")} />
       </Seccion>
 
-      <Seccion
-        icono="groups"
-        titulo="Bonos de equipo y meta colectiva"
-        descripcion="El dinero de estos tres bonos no se paga hasta que TODO el equipo junte la meta colectiva."
-      >
-        <Campo etiqueta="Meta colectiva (tickets)" type="number" min={1} {...num("meta_colectiva")} />
-        <Campo etiqueta="Vendedor rápido: antes del día" type="number" min={1} max={28} {...num("dias_vendedor_rapido")} />
-        <Campo etiqueta="Bono vendedor rápido ($)" type="number" step="0.01" {...num("premio_vendedor_rapido")} />
-        <Campo etiqueta="Bono cupo completo ($)" type="number" step="0.01" {...num("premio_cupo_completo")} />
-        <Campo etiqueta="Bono en racha (3 meses) ($)" type="number" step="0.01" {...num("premio_racha")} />
-      </Seccion>
+      {/* Interruptor maestro de los bonos */}
+      <section className="flex flex-col gap-4 rounded-xl bg-surface-container-lowest p-5 shadow-[0_10px_25px_rgba(26,82,118,0.05)]">
+        <div className="flex items-center gap-2">
+          <span className="flex size-9 items-center justify-center rounded-lg bg-primary-fixed text-primary">
+            <span className="material-symbols-outlined text-[18px]">toll</span>
+          </span>
+          <div className="flex flex-col">
+            <h2 className="text-headline text-primary">¿Pagar dinero por logros?</h2>
+            <p className="text-body-sm text-on-surface-variant">
+              Con los bonos apagados, las insignias se siguen ganando y
+              mostrando, pero no generan ningún pago.
+            </p>
+          </div>
+        </div>
 
-      <Seccion
-        icono="military_tech"
-        titulo="Top vendedor del mes"
-        descripcion="Se paga siempre al cerrar el mes, sin depender de la meta colectiva."
-      >
-        <Campo etiqueta="Premio 1er lugar ($)" type="number" step="0.01" {...num("premio_top_1")} />
-        <Campo etiqueta="Premio 2do lugar ($)" type="number" step="0.01" {...num("premio_top_2")} />
-        <Campo etiqueta="Premio 3er lugar ($)" type="number" step="0.01" {...num("premio_top_3")} />
-      </Seccion>
+        <div className="flex gap-2">
+          {[
+            { valor: true, texto: "Sí, con bonos", icono: "payments" },
+            { valor: false, texto: "No, solo insignias", icono: "military_tech" },
+          ].map((o) => (
+            <button
+              key={String(o.valor)}
+              disabled={datos.mes_iniciado}
+              onClick={() =>
+                setForm((f) => (f ? { ...f, bonos_activos: o.valor } : f))
+              }
+              className={`flex h-12 flex-1 items-center justify-center gap-2 rounded-lg border-2 text-body-sm font-semibold transition-colors disabled:opacity-50 ${
+                form.bonos_activos === o.valor
+                  ? "border-secondary bg-secondary-container/25 text-secondary"
+                  : "border-outline-variant text-on-surface-variant"
+              }`}
+            >
+              <span className="material-symbols-outlined text-[18px]">{o.icono}</span>
+              {o.texto}
+            </button>
+          ))}
+        </div>
+
+        {datos.mes_iniciado && (
+          <div className="flex items-start gap-2 rounded-lg bg-surface-container px-4 py-3 text-body-sm text-on-surface-variant">
+            <span className="material-symbols-outlined text-[18px]">lock</span>
+            El mes ya arrancó, así que esta decisión queda congelada hasta el
+            próximo cierre. Cambiarla ahora dejaría a unos vendedores
+            cobrando y a otros no por el mismo logro.
+          </div>
+        )}
+      </section>
+
+      {form.bonos_activos && (
+        <>
+          <Seccion
+            icono="groups"
+            titulo="Bonos de equipo y meta colectiva"
+            descripcion="El dinero de estos tres bonos no se paga hasta que TODO el equipo junte la meta colectiva."
+          >
+            <Campo etiqueta="Meta colectiva (tickets)" type="number" min={1} {...num("meta_colectiva")} />
+            <Campo etiqueta="Vendedor rápido: antes del día" type="number" min={1} max={28} {...num("dias_vendedor_rapido")} />
+            <Campo etiqueta="Bono vendedor rápido ($)" type="number" step="0.01" {...num("premio_vendedor_rapido")} />
+            <Campo etiqueta="Bono cupo completo ($)" type="number" step="0.01" {...num("premio_cupo_completo")} />
+            <Campo etiqueta="Bono en racha (3 meses) ($)" type="number" step="0.01" {...num("premio_racha")} />
+          </Seccion>
+
+          <Seccion
+            icono="military_tech"
+            titulo="Top vendedor del mes"
+            descripcion="Se paga al cerrar el mes, sin depender de la meta colectiva."
+          >
+            <Campo etiqueta="Premio 1er lugar ($)" type="number" step="0.01" {...num("premio_top_1")} />
+            <Campo etiqueta="Premio 2do lugar ($)" type="number" step="0.01" {...num("premio_top_2")} />
+            <Campo etiqueta="Premio 3er lugar ($)" type="number" step="0.01" {...num("premio_top_3")} />
+          </Seccion>
+        </>
+      )}
 
       <section className="flex flex-col gap-4 rounded-xl bg-surface-container-lowest p-5 shadow-[0_10px_25px_rgba(26,82,118,0.05)]">
         <div className="flex items-center gap-2">
